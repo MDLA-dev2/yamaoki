@@ -1,0 +1,3097 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дыхание Ямаоки — 3D Архив и Система Повышения</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Caveat:wght@500;700&family=Marck+Script&family=Neucha&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Boku&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --fib-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008 0.38' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.38 0 0 0 0 0.26 0 0 0 0 0.12 0 0 0 2.2 -0.95'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23f)'/%3E%3C/svg%3E");
+  --fib-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='380' height='380'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.3 0.006' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.40 0 0 0 0 0.28 0 0 0 0 0.13 0 0 0 2.0 -0.9'/%3E%3C/filter%3E%3Crect width='380' height='380' filter='url(%23f)'/%3E%3C/svg%3E");
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.30 0 0 0 0 0.20 0 0 0 0 0.08 0 0 0 1.3 -0.5'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #070402;
+  font-family: 'Marck Script', 'Segoe Script', cursive;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#webgl-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Мягкая кинематографичная виньетка */
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(3, 1, 0, 0.72) 100%);
+}
+
+/* Прицел в режиме от первого лица */
+.crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: rgba(255, 232, 185, 0.65);
+  box-shadow: 0 0 8px rgba(255, 185, 90, 0.7);
+  z-index: 10;
+  pointer-events: none;
+  transition: transform 0.18s ease, background 0.18s ease, opacity 0.2s ease;
+}
+.crosshair.active {
+  transform: scale(1.9);
+  background: #ffaa44;
+  box-shadow: 0 0 12px #ff8822;
+}
+.crosshair.hidden {
+  opacity: 0;
+}
+
+/* Всплывающая подпись при наведении на лист на столе */
+.hover-label {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 18px);
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  font-family: 'Caveat', cursive;
+  font-size: 1.32rem;
+  font-weight: 700;
+  color: #f6e6c2;
+  background: rgba(14, 8, 4, 0.85);
+  border: 1px solid rgba(235, 195, 130, 0.35);
+  padding: 3px 13px;
+  border-radius: 5px;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.75);
+}
+.hover-label.show {
+  opacity: 1;
+}
+
+/* Единственная ненавязчивая строка подсказки управления внизу */
+.controls-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 12;
+  pointer-events: none;
+  font-family: 'Caveat', cursive;
+  font-size: clamp(1.02rem, 1.35vw, 1.24rem);
+  color: rgba(238, 218, 178, 0.82);
+  background: rgba(12, 7, 3, 0.72);
+  border: 1px solid rgba(220, 185, 130, 0.22);
+  backdrop-filter: blur(4px);
+  padding: 5px 18px;
+  border-radius: 20px;
+  white-space: nowrap;
+  max-width: 96vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65);
+}
+
+/* ==========================================================================
+   МОДАЛЬНОЕ ОКНО ЧТЕНИЯ ЛИСТА ВБЛИЗИ
+   ========================================================================== */
+.reader {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 54px 14px 62px;
+  perspective: 1200px;
+}
+.reader.open { display: flex; }
+.reader::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 4, 2, 0.84);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.rwrap {
+  position: relative;
+  width: min(750px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: rise 0.34s cubic-bezier(.2,.8,.25,1) both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px) rotate(-1.2deg) scale(.95); }
+  to { opacity: 1; transform: none; }
+}
+.rsheet {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.78)) drop-shadow(0 0 1px rgba(0,0,0,.85));
+}
+.rpaper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  color: var(--ink, #2b1b0f);
+  background-color: var(--paper, #dac79b);
+  background-image: var(--stains), linear-gradient(135deg, rgba(255,246,214,.32), rgba(110,70,22,.18));
+  box-shadow: inset 0 0 42px rgba(95, 58, 18, 0.62), inset 0 0 9px rgba(50, 28, 6, 0.68);
+  clip-path: var(--clip, none);
+}
+.rpaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: var(--fib-h), var(--fib-v), var(--grain);
+  background-size: 420px 420px, 380px 380px, 200px 200px;
+  opacity: 0.9;
+}
+.rpaper.fold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 32%, rgba(70,42,15,.16) 33%, rgba(255,250,230,.22) 33.5%, transparent 35%),
+    linear-gradient(0deg, transparent 48.5%, rgba(70,42,15,.13) 50%, rgba(255,250,230,.2) 50.5%, transparent 52%);
+}
+
+/* Оттенки бумаги */
+.pa { --paper: #dac79b; --stains: radial-gradient(circle at 18% 82%, rgba(125,80,28,.30), transparent 20%), radial-gradient(circle at 84% 12%, rgba(115,75,30,.22), transparent 26%), radial-gradient(ellipse at 55% 50%, rgba(150,110,55,.14), transparent 55%); }
+.pb { --paper: #d0b684; --stains: radial-gradient(circle at 76% 74%, transparent 34px, rgba(120,80,30,.26) 37px, rgba(120,80,30,.07) 44px, transparent 47px), radial-gradient(circle at 12% 18%, rgba(110,70,28,.26), transparent 24%), radial-gradient(ellipse at 45% 60%, rgba(140,100,45,.15), transparent 60%); }
+.pc { --paper: #e1d4af; --stains: radial-gradient(circle at 90% 90%, rgba(130,90,40,.22), transparent 28%), radial-gradient(circle at 8% 40%, rgba(120,85,40,.16), transparent 22%); }
+.pd { --paper: #c9ab72; --stains: radial-gradient(circle at 25% 20%, rgba(95,58,20,.30), transparent 26%), radial-gradient(circle at 80% 85%, rgba(90,55,20,.28), transparent 30%), radial-gradient(ellipse at 50% 50%, rgba(150,105,50,.12), transparent 60%); }
+.pe { --paper: #d6c08f; --stains: radial-gradient(circle at 100% 100%, rgba(28,14,5,.78) 0, rgba(70,34,10,.55) 7%, rgba(110,64,22,.28) 14%, transparent 26%), radial-gradient(circle at 15% 25%, rgba(120,78,30,.22), transparent 24%), radial-gradient(ellipse at 50% 50%, rgba(150,108,52,.12), transparent 60%); }
+
+/* Почерки */
+.hA { font-family: 'Marck Script', 'Segoe Script', cursive; --fs: 1.08rem; --ink: #2b1b0f; }
+.hB { font-family: 'Bad Script', 'Segoe Script', cursive; --fs: 1rem; --ink: #1f2433; }
+.hC { font-family: 'Neucha', cursive; --fs: 1.05rem; --ink: #3b3834; }
+
+.rscroll {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  overflow: auto;
+  padding: 36px clamp(24px, 6vw, 58px) 42px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100,65,25,.5) transparent;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0.85em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid rgba(75,45,15,.22);
+}
+.num {
+  font-size: 2.3em;
+  line-height: 1.05;
+  opacity: 0.88;
+  text-shadow: 0 0 1px currentColor;
+}
+.tag {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  font-size: 1.38rem;
+  color: #5b5043;
+  transform: rotate(-2deg);
+}
+.rbody { font-size: calc(var(--fs, 1.05rem) * 1.3); }
+.rbody p {
+  margin: 0 0 0.85em;
+  line-height: 1.62;
+  text-shadow: 0 0 0.7px currentColor, 0.3px 0.4px 1.2px rgba(60,30,10,.22);
+}
+.rank-list {
+  margin: 0;
+  padding: 0 0 0 1.1em;
+  list-style: disc;
+  font-size: calc(var(--fs, 1.05rem) * 1.25);
+  line-height: 1.62;
+}
+.rank-list li {
+  margin: 0 0 0.5em;
+  position: relative;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+.rank-list li:hover {
+  color: #7c2318;
+  background: rgba(120, 75, 25, 0.08);
+}
+.rank-list li.done {
+  opacity: 0.62;
+  color: #5c4632;
+}
+.rank-list li.done::after {
+  content: "";
+  position: absolute;
+  left: -2%;
+  right: 4%;
+  top: 52%;
+  height: 2.5px;
+  background: linear-gradient(90deg, rgba(145,32,20,0.88), rgba(45,25,10,0.85) 80%, transparent);
+  transform: rotate(-1.2deg);
+  pointer-events: none;
+}
+.cd-list {
+  margin: 0.25em 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: calc(var(--fs, 1.05rem) * 1.22);
+  line-height: 1.58;
+}
+.cd-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 0.38em;
+  border-bottom: 1px dashed rgba(75,45,15,.22);
+  padding-bottom: 3px;
+}
+.cd-list li.cur {
+  color: #8a2a1c;
+  font-weight: 700;
+  border-bottom-color: rgba(138,42,28,.65);
+}
+
+.rbtn {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  font-size: 1.42rem;
+  color: #e6d3a6;
+  background: rgba(20, 12, 6, 0.72);
+  border: 1px solid rgba(230, 211, 166, 0.28);
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 5px 15px;
+  opacity: 0.88;
+  transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+}
+.rbtn:hover, .rbtn:focus-visible {
+  opacity: 1;
+  background: rgba(38, 23, 11, 0.92);
+  border-color: rgba(255, 215, 150, 0.6);
+  outline: none;
+}
+.rbtn[hidden] { display: block; visibility: hidden; }
+.rclose {
+  position: absolute;
+  top: -45px;
+  right: 0;
+}
+.rnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+.rank-stamp-dom {
+  position: absolute;
+  right: 6%;
+  bottom: 6%;
+  z-index: 5;
+  width: 66px;
+  height: 66px;
+  border: 3px solid #a32a1d;
+  border-radius: 50%;
+  color: #a32a1d;
+  font: 700 1.35rem/1 'Caveat', cursive;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 2px rgba(163,42,29,.35);
+  transform: rotate(-12deg);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div id="webgl-container"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="crosshair" id="crosshair" aria-hidden="true"></div>
+<div class="hover-label" id="hoverLabel" aria-hidden="true"></div>
+
+<!-- ЕДИНСТВЕННАЯ СТРОКА УПРАВЛЕНИЯ СНИЗУ -->
+<div class="controls-hint" id="controlsHint">
+  ЛКМ — открыть лист / захватить взгляд · ПКМ (зажать) — передвинуть лист · WASD — шаг · Space / C — наклониться · Колесо — зум · Tab — свободный курсор
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ЧТЕНИЯ ЛИСТА -->
+<div class="reader" id="reader" aria-hidden="true">
+  <div class="rwrap" role="dialog" aria-modal="true" aria-label="Лист для чтения">
+    <button class="rbtn rclose" id="rclose" type="button">закрыть (Esc)</button>
+    <div class="rsheet">
+      <div class="rpaper" id="rpaper">
+        <div class="rscroll" id="rscroll" tabindex="0">
+          <div class="head"><span class="num" id="rnum"></span><span class="tag" id="rtag"></span></div>
+          <div class="rbody" id="rbody"></div>
+        </div>
+      </div>
+    </div>
+    <div class="rnav">
+      <button class="rbtn" id="rprev" type="button">← раньше</button>
+      <button class="rbtn" id="rmark" type="button" hidden></button>
+      <button class="rbtn" id="rnext" type="button">дальше →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==========================================================================
+     1. ПОЛНЫЕ ДАННЫЕ ВСЕХ 19 БУМАЖЕК НА СТОЛЕ (ЛОР ДЫХАНИЯ И СИСТЕМА ПОВЫШЕНИЯ)
+     ========================================================================== */
+  var SHEETS_DATA = [
+    {
+      id: 'title',
+      type: 'title',
+      order: 0,
+      openable: true,
+      num: 'Дыхание Ямаоки',
+      tag: 'Восхождение пламени',
+      kanjiTop: '炎の呼吸より',
+      sub: 'Восхождение пламени',
+      hint: 'Листы можно двигать и открывать. Справа на столе лежит система повышения.',
+      pal: 'pa',
+      hand: 'hA',
+      fold: true,
+      hanko: true,
+      pin: true,
+      seed: 3,
+      amp: 1.0,
+      corner: -1,
+      x: -1.16, z: -0.44, w: 0.43, h: 0.44, rot: 0.05,
+      paragraphs: [
+        'Записи об ответвлении Дыхания Пламени, известном среди мечников Корпуса Истребителей Демонов как «Восхождение пламени» (Ямаоки).',
+        'На левой половине стола собраны шесть глав о происхождении, философии, манере боя и архивах семьи Ренгоку. На правой половине — регламент и ступени повышения мечников от Мидзуното до Киноэ.'
+      ]
+    },
+    {
+      id: 'strip',
+      type: 'strip',
+      openable: false,
+      num: 'ヤマオキの呼吸',
+      tag: '',
+      pal: 'pd',
+      hand: 'hA',
+      seed: 7,
+      amp: 0.7,
+      corner: -1,
+      x: -0.84, z: -0.49, w: 0.10, h: 0.43, rot: -0.04
+    },
+    {
+      id: 's1',
+      type: 'lore',
+      order: 1,
+      openable: true,
+      num: 'I',
+      tag: 'происхождение',
+      pal: 'pa',
+      hand: 'hA',
+      fold: true,
+      mark: '?',
+      pin: true,
+      stone: { ox: 0.15, oz: -0.17, r: 0.032 },
+      seed: 11,
+      amp: 1.1,
+      corner: -1,
+      x: -0.52, z: -0.42, w: 0.45, h: 0.50, rot: -0.035,
+      paragraphs: [
+        'Ямаоки относится к ответвлениям Дыхания Пламени, появившимся уже после того, как первоначальные стили начали распространяться среди истребителей демонов. Его возникновение относят к периоду развития Корпуса, когда ученики разных школ всё чаще приспосабливали полученные знания к собственным возможностям.',
+        'В основе Ямаоки лежит простая идея: мечнику необязательно повторять каждый приём своего учителя в точности. Дыхание Пламени требовало хорошей физической подготовки, решительности и умения поддерживать стремительный натиск. Но не каждому подходила такая манера боя. Некоторые истребители уставали раньше, чем успевали воспользоваться преимуществом своей скорости, другие слишком увлекались атакой и оставляли себя открытыми для ответного удара.',
+        'Один из последователей Пламени решил изменить привычный подход. Вместо того чтобы пытаться воспроизвести чужую технику без отклонений, он начал перестраивать её под собственный темп. Его интересовали короткие переходы между движениями, точность ударов и возможность быстро менять направление атаки, не теряя равновесия.',
+        'Постепенно эти изменения сложились в отдельный стиль. Он сохранил стремительность своего предшественника, но стал требовать большего внимания к положению противника и собственным движениям.',
+        'Имя первого создателя не сохранилось. Известно лишь, что Ямаоки выросло из практики владения мечом, а не из попытки создать совершенно новое искусство.'
+      ]
+    },
+    {
+      id: 's2',
+      type: 'lore',
+      order: 2,
+      openable: true,
+      num: 'II',
+      tag: 'название',
+      pal: 'pb',
+      hand: 'hB',
+      fold: false,
+      mark: '?',
+      pin: true,
+      seed: 23,
+      amp: 1.3,
+      corner: -1,
+      x: -0.03, z: -0.45, w: 0.42, h: 0.46, rot: 0.04,
+      paragraphs: [
+        'Слово «Ямаоки» сохранилось в названии дыхания, хотя его первоначальное значение установить не удалось. Среди позднейших практикующих закрепилось образное толкование, связанное с восхождением: гора олицетворяет стойкость, а подъём к вершине — движение вперёд, требующее усилий и терпения.',
+        'Так возникло выражение «Восхождение пламени». Это не буквальный перевод названия, а смысл, который со временем приобрёл сам стиль.',
+        'Его философия строится вокруг способности продолжать бой, даже если противник оказался сильнее ожидаемого. Мечник не должен тратить все силы на первую атаку или пытаться переломить ход сражения одним ударом. Ему необходимо сохранять хладнокровие, замечать ошибки противника и использовать открывающиеся возможности.',
+        'Подобный подход не исключает решительных атак. Напротив, Ямаоки предполагает, что мечник способен действовать быстро, когда для этого появляется подходящий момент. Главное — не путать стремительность с поспешностью.'
+      ]
+    },
+    {
+      id: 'scrap',
+      type: 'scrap',
+      openable: false,
+      num: '',
+      tag: '',
+      pal: 'pc',
+      hand: 'hA',
+      seed: 31,
+      amp: 1.6,
+      corner: 1,
+      x: -1.24, z: 0.08, w: 0.30, h: 0.28, rot: -0.07
+    },
+    {
+      id: 's3',
+      type: 'lore',
+      order: 3,
+      openable: true,
+      num: 'III',
+      tag: 'манера боя',
+      pal: 'pc',
+      hand: 'hA',
+      fold: true,
+      blot: { x: 0.85, y: 0.44, r: 18 },
+      pin: true,
+      seed: 41,
+      amp: 0.9,
+      corner: -1,
+      x: -0.82, z: 0.12, w: 0.45, h: 0.52, rot: 0.025,
+      paragraphs: [
+        'Ямаоки унаследовало от Пламени мощные рубящие движения и быстрые выпады, но отличается более сдержанными переходами между атаками. Практикующий старается не вкладывать всю силу в каждое движение, сохраняя возможность продолжить бой после неудачного удара или неожиданного изменения ситуации.',
+        'Важную роль играет работа ног. Мечник постоянно корректирует дистанцию, стараясь не задерживаться в положении, из которого трудно уклониться или перейти к следующей атаке. При этом он не стремится бесконечно отступать и выжидать: если появляется возможность нанести решающий удар, Ямаоки позволяет воспользоваться ею без промедления.',
+        'У стиля есть и свои недостатки. Он требует хорошего чувства дистанции и способности быстро оценивать движения противника. Мечник, который слишком долго выжидает удобный момент, рискует уступить инициативу. Тот же, кто пытается выполнять приёмы на пределе скорости, теряет точность и нарушает последовательность движений.',
+        'Поэтому Ямаоки нельзя назвать ни исключительно оборонительным, ни исключительно атакующим дыханием. Его характер определяется тем, насколько умело практикующий сочетает подготовку к удару с самим ударом.'
+      ]
+    },
+    {
+      id: 's4',
+      type: 'lore',
+      order: 4,
+      openable: true,
+      num: 'IV',
+      tag: 'искры',
+      pal: 'pd',
+      hand: 'hC',
+      fold: false,
+      blot: { x: 0.88, y: 0.12, r: 14 },
+      pin: true,
+      seed: 53,
+      amp: 1.5,
+      corner: 3,
+      x: -0.35, z: 0.16, w: 0.36, h: 0.38, rot: 0.08,
+      paragraphs: [
+        'Во время исполнения приёмов Ямаоки вокруг траектории клинка появляются мелкие сине-белые искры, напоминающие вспышки бенгальского огня. Они рассыпаются на короткое мгновение и быстро исчезают.',
+        'Визуально это отличает дыхание от привычного образа бушующего пламени. Здесь нет непрерывного огненного потока: лишь отдельные вспышки, сопровождающие движение меча.',
+        'Со временем искры стали частью образа Ямаоки. Их связывают с представлением о пламени, которое продолжает подниматься, даже когда его сила уже не кажется внушительной. Каждая вспышка кратка, но вместе они создают узнаваемый рисунок движений.'
+      ]
+    },
+    {
+      id: 's5',
+      type: 'lore',
+      order: 5,
+      openable: true,
+      num: 'V',
+      tag: 'архивы Ренгоку',
+      pal: 'pe',
+      hand: 'hA',
+      fold: false,
+      blot: { x: 0.14, y: 0.86, r: 22 },
+      pin: true,
+      stone: { ox: 0.15, oz: -0.15, r: 0.035 },
+      seed: 67,
+      amp: 1.2,
+      corner: 2,
+      x: 0.10, z: 0.12, w: 0.44, h: 0.50, rot: -0.05,
+      paragraphs: [
+        'Сведения о ранних практикующих Ямаоки сохранились плохо. Стиль не получил широкой известности, а его последовательность приёмов передавалась ограниченным кругом мечников. В результате отдельные техники могли сохраняться в личных записях, тогда как другие исчезали вместе с теми, кто ими владел.',
+        'Поиск сведений о дыхании может привести к архивам семьи Ренгоку. Поскольку Ямаоки связывают с Дыханием Пламени, среди старых материалов могут оказаться описания необычных вариантов исполнения его приёмов или упоминания мечников, использовавших отличавшуюся от основной школы технику.',
+        'Такие записи не обязательно содержат название «Ямаоки». Возможно, речь идёт лишь о наблюдениях за отдельными истребителями, чьи методы позднее стали частью самостоятельного дыхания. Подобные свидетельства могли бы помочь проследить развитие стиля, хотя сами по себе не позволили бы установить имя его создателя.',
+        'Пока архивы остаются лишь возможным источником информации. Но именно там стоит искать первые зацепки, если появится желание восстановить раннюю историю Ямаоки.'
+      ]
+    },
+    {
+      id: 's6',
+      type: 'lore',
+      order: 6,
+      openable: true,
+      num: 'VI',
+      tag: 'ныне',
+      pal: 'pb',
+      hand: 'hB',
+      fold: true,
+      pin: true,
+      stone: { ox: 0.16, oz: -0.12, r: 0.03 },
+      seed: 79,
+      amp: 1.0,
+      corner: -1,
+      x: -0.52, z: 0.62, w: 0.47, h: 0.43, rot: 0.03,
+      paragraphs: [
+        'За время существования Ямаоки его приёмы могли изменяться. Каждый практикующий вносил поправки, исходя из собственной подготовки и опыта, поэтому нынешний стиль необязательно полностью совпадает с тем, который использовали первые последователи.',
+        'При этом Ямаоки не требует от своего носителя следовать единственному правильному пути. Его основа остаётся прежней: точность движений, контроль над расходом сил и умение переходить от выжидания к атаке, не теряя самообладания.',
+        'Для нынешнего поколения истребителей Ямаоки представляет собой редкое ответвление Пламени, сохранившее собственную манеру боя, но не получившее известности. Его история ещё может пополниться новыми сведениями, особенно если удастся обнаружить старые записи.',
+        'А пока его название продолжает жить вместе с самим дыханием. «Восхождение пламени» — это напоминание о том, что путь мечника определяется не одной победой, а тем, чему он научился и способен ли двигаться дальше.'
+      ]
+    },
+
+    /* ==================== ПРАВАЯ СТОРОНА СТОЛА: СИСТЕМА ПОВЫШЕНИЯ ==================== */
+    {
+      id: 'rank-cd',
+      type: 'cd',
+      order: 7,
+      openable: true,
+      num: 'Система повышения',
+      tag: 'до повышения',
+      pal: 'pa',
+      hand: 'hA',
+      fold: true,
+      pin: true,
+      stone: { ox: 0.13, oz: -0.15, r: 0.031 },
+      seed: 103,
+      amp: 1.1,
+      corner: -1,
+      x: 0.45, z: -0.45, w: 0.37, h: 0.44, rot: 0.04,
+      cdList: [
+        ['Midzunoto → Midzunoe', '1 день'],
+        ['Midzunoe → Kanoto', '1 день'],
+        ['Kanoto → Kanoe', '1 день'],
+        ['Kanoe → Tsuchinoto', '1 день'],
+        ['Tsuchinoto → Tsuchinoe', '2 дня'],
+        ['Tsuchinoe → Hinoto', '2 дня'],
+        ['Hinoto → Hinoe', '2 дня'],
+        ['Hinoe → Kinoto', '2 дня'],
+        ['Kinoto → Kinoe', '3 дня']
+      ]
+    },
+    {
+      id: 'r1',
+      type: 'rank',
+      order: 8,
+      openable: true,
+      num: 'Midzunoto → Midzunoe',
+      tag: '',
+      pal: 'pc',
+      hand: 'hB',
+      pin: true,
+      seed: 113,
+      amp: 1.2,
+      corner: -1,
+      x: 0.81, z: -0.46, w: 0.32, h: 0.31, rot: -0.03,
+      tasks: [
+        'Истребить 5 демонов',
+        'Поучаствовать в 1 тренировке',
+        'Провести патруль (15 минут)'
+      ]
+    },
+    {
+      id: 'r2',
+      type: 'rank',
+      order: 9,
+      openable: true,
+      num: 'Midzunoe → Kanoto',
+      tag: '',
+      pal: 'pb',
+      hand: 'hA',
+      pin: true,
+      seed: 127,
+      amp: 1.3,
+      corner: 1,
+      x: 1.14, z: -0.44, w: 0.32, h: 0.33, rot: 0.03,
+      tasks: [
+        'Истребить 8 демонов',
+        'Поучаствовать в 2 тренировках',
+        'Лопнуть малый панкун дыханием',
+        'Захватить 1 точку'
+      ]
+    },
+    {
+      id: 'r3',
+      type: 'rank',
+      order: 10,
+      openable: true,
+      num: 'Kanoto → Kanoe',
+      tag: '',
+      pal: 'pd',
+      hand: 'hC',
+      fold: true,
+      blot: { x: 0.86, y: 0.82, r: 15 },
+      pin: true,
+      seed: 139,
+      amp: 1.1,
+      corner: -1,
+      x: 1.47, z: -0.45, w: 0.33, h: 0.35, rot: -0.04,
+      tasks: [
+        'Истребить 11 демонов',
+        '2 тренировки и 1 мероприятие',
+        'Спарринг с мечником своего или старшего ранга',
+        'Сдать проверку устава Инструктору+'
+      ]
+    },
+    {
+      id: 'r4',
+      type: 'rank',
+      order: 11,
+      openable: true,
+      num: 'Kanoe → Tsuchinoto',
+      tag: '',
+      pal: 'pe',
+      hand: 'hA',
+      pin: true,
+      seed: 149,
+      amp: 1.2,
+      corner: 2,
+      x: 0.48, z: 0.07, w: 0.32, h: 0.33, rot: -0.025,
+      tasks: [
+        'Истребить 14 демонов',
+        'Поучаствовать в 3 тренировках',
+        'Захватить 2 точки',
+        'Провести патруль (15 минут)'
+      ]
+    },
+    {
+      id: 'r5',
+      type: 'rank',
+      order: 12,
+      openable: true,
+      num: 'Tsuchinoto → Tsuchinoe',
+      tag: '',
+      pal: 'pc',
+      hand: 'hB',
+      fold: true,
+      pin: true,
+      seed: 163,
+      amp: 1.0,
+      corner: -1,
+      x: 0.82, z: 0.05, w: 0.33, h: 0.34, rot: 0.035,
+      tasks: [
+        'Истребить 17 демонов',
+        '3 тренировки и 1 мероприятие',
+        'Захватить 2 точки',
+        '1 поручение от Инструктора+ или Цугуко+'
+      ]
+    },
+    {
+      id: 'r6',
+      type: 'rank',
+      order: 13,
+      openable: true,
+      num: 'Tsuchinoe → Hinoto',
+      tag: '',
+      pal: 'pa',
+      hand: 'hC',
+      blot: { x: 0.14, y: 0.85, r: 16 },
+      pin: true,
+      seed: 179,
+      amp: 1.4,
+      corner: 3,
+      x: 1.16, z: 0.08, w: 0.33, h: 0.35, rot: -0.045,
+      tasks: [
+        'Истребить 19 демонов',
+        '3 тренировки и 2 мероприятия',
+        'Захватить 2 точки',
+        'Лопнуть средний панкун дыханием',
+        'Спарринг с Инструктором+'
+      ]
+    },
+    {
+      id: 'r7',
+      type: 'rank',
+      order: 14,
+      openable: true,
+      num: 'Hinoto → Hinoe',
+      tag: '',
+      pal: 'pb',
+      hand: 'hA',
+      fold: true,
+      pin: true,
+      stone: { ox: 0.12, oz: 0.12, r: 0.03 },
+      seed: 191,
+      amp: 1.1,
+      corner: -1,
+      x: 1.50, z: 0.06, w: 0.34, h: 0.36, rot: 0.025,
+      tasks: [
+        'Истребить 21 демон',
+        '4 тренировки и 2 мероприятия',
+        'Провести 1 тренировку младшим рангам',
+        'Групповой патруль (15 минут)',
+        '1 поручение от Цугуко или Столпа'
+      ]
+    },
+    {
+      id: 'r8',
+      type: 'rank',
+      order: 15,
+      openable: true,
+      num: 'Hinoe → Kinoto',
+      tag: '',
+      pal: 'pd',
+      hand: 'hB',
+      pin: true,
+      seed: 211,
+      amp: 1.3,
+      corner: -1,
+      x: 0.68, z: 0.56, w: 0.36, h: 0.36, rot: 0.04,
+      tasks: [
+        'Истребить 23 демона',
+        '4 тренировки и 3 мероприятия',
+        'Захватить 3 точки',
+        'Лопнуть большой панкун дыханием',
+        'Спарринг с Цугуко или ст. Инструктором'
+      ]
+    },
+    {
+      id: 'r9',
+      type: 'rank',
+      order: 16,
+      openable: true,
+      num: 'Kinoto → Kinoe',
+      tag: '',
+      pal: 'pa',
+      hand: 'hA',
+      fold: true,
+      hanko: true,
+      pin: true,
+      stone: { ox: 0.14, oz: -0.12, r: 0.033 },
+      seed: 223,
+      amp: 1.1,
+      corner: -1,
+      x: 1.14, z: 0.55, w: 0.38, h: 0.38, rot: -0.035,
+      tasks: [
+        'Истребить 25 демонов',
+        '5 тренировок и 3 мероприятия',
+        'Провести 2 тренировки младшему составу',
+        'Захватить 4 точки',
+        'Бой со Столпом и одобрение на Киноэ'
+      ]
+    }
+  ];
+
+  /* ==========================================================================
+     2. СОСТОЯНИЕ ЗАДАНИЙ И ЦЕЛИ РАНГА (СОХРАНЕНИЕ В LOCALSTORAGE)
+     ========================================================================== */
+  var TASKS_KEY = 'yamaoki-tasks-done';
+  var GKEY = 'yamaoki-goal';
+  var doneTasks = {};
+  var goalKey = null;
+  var waits = {};
+
+  try { doneTasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '{}') || {}; } catch (e) { doneTasks = {}; }
+  try { goalKey = localStorage.getItem(GKEY); } catch (e) { goalKey = null; }
+
+  SHEETS_DATA[9].cdList.forEach(function (pair) { waits[pair[0]] = pair[1]; });
+
+  function saveTasks() {
+    try { localStorage.setItem(TASKS_KEY, JSON.stringify(doneTasks)); } catch (e) {}
+  }
+
+  /* ==========================================================================
+     3. АУДИО-ДВИЖОК (ШАГИ ПО ТАТАМИ, ШОРОХ БУМАГИ, ОГОНЬ И КОЛОКОЛЬЧИК)
+     ========================================================================== */
+  var Snd = (function () {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = null, master, fx, amb, verb, white, brown;
+    var loopsStarted = false, scrape = null, scrapeTimer = 0;
+    var MASTER = 0.32;
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function live() { return !!ctx && ctx.state === 'running'; }
+
+    function bus(send) {
+      var g = ctx.createGain(), s = ctx.createGain();
+      s.gain.value = send;
+      g.connect(master); g.connect(s); s.connect(verb);
+      return g;
+    }
+
+    function build() {
+      var i, c, d;
+      ctx = new AC();
+      var comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -16; comp.ratio.value = 5;
+      master = ctx.createGain();
+      master.gain.value = MASTER;
+      master.connect(comp); comp.connect(ctx.destination);
+
+      var len = Math.floor(ctx.sampleRate * 2.0), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (c = 0; c < 2; c++) {
+        d = ir.getChannelData(c);
+        for (i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+      }
+      verb = ctx.createConvolver(); verb.buffer = ir;
+      var verbOut = ctx.createGain(); verbOut.gain.value = 0.45;
+      verb.connect(verbOut); verbOut.connect(master);
+
+      fx = bus(0.24);
+      amb = bus(0.35);
+
+      white = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      d = white.getChannelData(0);
+      for (i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+
+      brown = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate);
+      d = brown.getChannelData(0);
+      var lastVal = 0;
+      for (i = 0; i < d.length; i++) { lastVal = (lastVal + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = lastVal * 3.5; }
+    }
+
+    function grain(t, dur, freq, q, peak, dest) {
+      var s = ctx.createBufferSource(); s.buffer = white;
+      var bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + Math.min(0.004, dur * 0.3));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(bp); bp.connect(g); g.connect(dest);
+      s.start(t, Math.random() * 1.5, dur + 0.02);
+    }
+    function rustle(o) {
+      var t0 = ctx.currentTime + (o.delay || 0);
+      for (var i = 0; i < o.n; i++) {
+        var x = Math.random();
+        grain(t0 + x * o.dur, rnd(0.01, 0.055), rnd(o.lo, o.hi), rnd(0.7, 1.9), o.gain * (0.25 + Math.random() * 0.75) * o.shape(x), fx);
+      }
+    }
+    function swoosh(t, dur, f1, f2, peak) {
+      var s = ctx.createBufferSource(); s.buffer = white; s.loop = true;
+      var bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
+      bp.frequency.setValueAtTime(f1, t); bp.frequency.exponentialRampToValueAtTime(f2, t + dur);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + dur * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(bp); bp.connect(g); g.connect(fx);
+      s.start(t, 0, dur + 0.05);
+    }
+    function thump(t, f, dur, peak) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.55, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(fx);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+
+    function ensureScrape() {
+      if (scrape) return;
+      var s = ctx.createBufferSource(); s.buffer = white; s.loop = true;
+      var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+      var bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 0.6;
+      var g = ctx.createGain(); g.gain.value = 0;
+      s.connect(hp); hp.connect(bp); bp.connect(g); g.connect(fx);
+      s.start();
+      scrape = { g: g, bp: bp };
+    }
+
+    function startAmbient() {
+      if (loopsStarted) return;
+      loopsStarted = true;
+      var room = ctx.createBufferSource(); room.buffer = brown; room.loop = true;
+      var rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 175;
+      var rg = ctx.createGain(); rg.gain.value = 0.22;
+      room.connect(rlp); rlp.connect(rg); rg.connect(amb); room.start();
+
+      (function crackle() {
+        if (live()) {
+          var t = ctx.currentTime, big = Math.random() < 0.14;
+          grain(t, rnd(0.003, big ? 0.028 : 0.012), rnd(2400, 7500), 1.2, big ? 0.65 : 0.3, amb);
+        }
+        setTimeout(crackle, rnd(250, 2200));
+      })();
+    }
+
+    var api = {
+      unlock: function () {
+        if (!AC) return;
+        if (!ctx) build();
+        if (ctx.state === 'suspended') ctx.resume();
+        startAmbient();
+      },
+      step: function () {
+        if (!live()) return;
+        var t = ctx.currentTime;
+        thump(t, rnd(68, 82), 0.09, 0.14);
+        grain(t, 0.06, rnd(900, 1700), 1.1, 0.11, fx);
+      },
+      pick: function () {
+        if (!live()) return;
+        rustle({ dur: 0.18, n: 8, gain: 0.65, lo: 1500, hi: 5800, shape: function (x) { return 1 - x * 0.75; } });
+      },
+      drag: function (v) {
+        if (!live()) return;
+        ensureScrape();
+        var t = ctx.currentTime, k = Math.min(1, v / 1.4);
+        scrape.g.gain.setTargetAtTime(k * 0.75, t, 0.03);
+        scrape.bp.frequency.setTargetAtTime(1700 + k * 2200, t, 0.05);
+        clearTimeout(scrapeTimer);
+        scrapeTimer = setTimeout(api.dragEnd, 90);
+      },
+      dragEnd: function () {
+        clearTimeout(scrapeTimer);
+        if (scrape && ctx) scrape.g.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+      },
+      drop: function () {
+        if (!live()) return;
+        thump(ctx.currentTime, 115, 0.1, 0.24);
+        rustle({ dur: 0.08, n: 4, gain: 0.45, lo: 1200, hi: 4000, shape: function () { return 1; } });
+      },
+      stamp: function () {
+        if (!live()) return;
+        thump(ctx.currentTime, 82, 0.18, 0.55);
+        rustle({ dur: 0.12, n: 8, gain: 0.65, lo: 900, hi: 3500, shape: function () { return 1; } });
+      },
+      open: function () {
+        if (!live()) return;
+        rustle({ dur: 0.55, n: 24, gain: 1.0, lo: 1800, hi: 6200, shape: function (x) { return Math.sin(Math.PI * Math.min(1, x * 1.1)); } });
+        swoosh(ctx.currentTime, 0.45, 450, 1350, 0.45);
+      },
+      turn: function () {
+        if (!live()) return;
+        rustle({ dur: 0.35, n: 14, gain: 0.75, lo: 1600, hi: 5800, shape: function (x) { return Math.sin(Math.PI * x); } });
+        swoosh(ctx.currentTime, 0.28, 500, 1200, 0.28);
+      },
+      close: function () {
+        if (!live()) return;
+        rustle({ dur: 0.26, n: 10, gain: 0.55, lo: 1500, hi: 4800, shape: function (x) { return 1 - x * 0.6; } });
+        thump(ctx.currentTime + 0.2, 98, 0.1, 0.15);
+      }
+    };
+    return api;
+  })();
+
+  ['pointerdown', 'keydown'].forEach(function (ev) { addEventListener(ev, Snd.unlock, true); });
+
+  /* ==========================================================================
+     4. ГЕНЕРАЦИЯ РВАНЫХ КРАЁВ И ВЫСОКОДЕТАЛЬНЫХ ТЕКСТУР БУМАГИ + РЕЛЬЕФА
+     ========================================================================== */
+  function rng(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function roughPolygonPoints(seed, amp, corner) {
+    var r = rng(seed), pts = [], n = 34, i;
+    function j() { return (r() * 0.85 + 0.15) * amp * 1.35; }
+    for (i = 0; i <= n; i++) pts.push([i / n, j() / 100]);
+    for (i = 1; i <= n; i++) pts.push([1 - j() / 100, i / n]);
+    for (i = 1; i <= n; i++) pts.push([1 - i / n, 1 - j() / 100]);
+    for (i = 1; i < n; i++) pts.push([j() / 100, 1 - i / n]);
+    if (corner >= 0) {
+      var c = [[0, 0], [1, 0], [1, 1], [0, 1]][corner], R = 0.19;
+      pts.forEach(function (p) {
+        var dx = p[0] - c[0], dy = p[1] - c[1], d = Math.hypot(dx, dy);
+        if (d < R) {
+          var k = (R - d) / R, pull = k * k * 0.11 + r() * k * 0.035;
+          var vx = 0.5 - p[0], vy = 0.5 - p[1], len = Math.hypot(vx, vy) || 1;
+          p[0] += vx / len * pull; p[1] += vy / len * pull;
+        }
+      });
+    }
+    return pts;
+  }
+
+  function roughClipCSS(seed, amp, corner) {
+    var pts = roughPolygonPoints(seed, amp, corner);
+    return 'polygon(' + pts.map(function (p) { return (p[0] * 100).toFixed(2) + '% ' + (p[1] * 100).toFixed(2) + '%'; }).join(',') + ')';
+  }
+
+  var PALETTES = {
+    pa: { bg: '#dac79b', dark: '#a88349', ink: '#29190d', font: "'Marck Script', cursive" },
+    pb: { bg: '#d0b684', dark: '#9c7538', ink: '#1d2230', font: "'Bad Script', cursive" },
+    pc: { bg: '#e1d4af', dark: '#b3955e', ink: '#29190d', font: "'Marck Script', cursive" },
+    pd: { bg: '#c9ab72', dark: '#916a2d', ink: '#36332f', font: "'Neucha', cursive" },
+    pe: { bg: '#d6c08f', dark: '#9e7638', ink: '#29190d', font: "'Marck Script', cursive" }
+  };
+
+  function wrapParagraph(ctx, text, x, y, maxWidth, lineHeight) {
+    var words = text.split(' ');
+    var line = '';
+    for (var n = 0; n < words.length; n++) {
+      var testLine = line + words[n] + ' ';
+      var metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, x, y);
+        line = words[n] + ' ';
+        y += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, x, y);
+    return y + lineHeight;
+  }
+
+  // Единая карта рельефа волокон и помятостей для всех 3D-листов бумаги
+  function createPaperBumpTexture() {
+    var cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 512;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 512, 512);
+    var r = rng(777);
+    for (var i = 0; i < 4500; i++) {
+      var x = r() * 512, y = r() * 512, l = 8 + r() * 28, a = (r() - 0.5) * 0.4;
+      ctx.strokeStyle = r() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 1 + r() * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+      ctx.stroke();
+    }
+    // Мягкие диагональные заломы
+    for (var k = 0; k < 12; k++) {
+      var gx = r() * 512, gy = r() * 512;
+      var gr = ctx.createRadialGradient(gx, gy, 4, gx, gy, 50 + r() * 90);
+      gr.addColorStop(0, r() > 0.5 ? 'rgba(220,220,220,0.16)' : 'rgba(40,40,40,0.16)');
+      gr.addColorStop(1, 'rgba(128,128,128,0)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(0, 0, 512, 512);
+    }
+    var tex = new THREE.CanvasTexture(cv);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  function renderSheetCanvas(item) {
+    var W = item.type === 'strip' ? 256 : 768;
+    var H = Math.round(W * (item.h / item.w));
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext('2d');
+    var pal = PALETTES[item.pal] || PALETTES.pa;
+    var r = rng(item.seed * 19 + 7);
+
+    var pts = roughPolygonPoints(item.seed, item.amp * 1.6, item.corner);
+    ctx.save();
+    ctx.beginPath();
+    pts.forEach(function (p, idx) {
+      if (idx === 0) ctx.moveTo(p[0] * W, p[1] * H);
+      else ctx.lineTo(p[0] * W, p[1] * H);
+    });
+    ctx.closePath();
+    ctx.clip();
+
+    // Базовый пергаментный тон
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Тёмная виньетка старения по краям
+    var grad = ctx.createRadialGradient(W * 0.5, H * 0.5, W * 0.15, W * 0.5, H * 0.5, W * 0.76);
+    grad.addColorStop(0, 'rgba(255, 248, 224, 0.25)');
+    grad.addColorStop(0.68, 'rgba(130, 86, 32, 0.16)');
+    grad.addColorStop(1, 'rgba(52, 26, 6, 0.65)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Пятна сырости и возраста
+    for (var s = 0; s < 8; s++) {
+      var sx = r() * W, sy = r() * H, sr = (0.1 + r() * 0.24) * W;
+      var sg = ctx.createRadialGradient(sx, sy, sr * 0.08, sx, sy, sr);
+      sg.addColorStop(0, 'rgba(105, 65, 20, 0.16)');
+      sg.addColorStop(1, 'rgba(105, 65, 20, 0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // След от чашки чая на листах pb
+    if (item.pal === 'pb') {
+      ctx.strokeStyle = 'rgba(110, 68, 22, 0.24)';
+      ctx.lineWidth = W * 0.012;
+      ctx.beginPath();
+      ctx.arc(W * 0.75, H * 0.74, W * 0.11, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Волокна бумаги васи
+    ctx.lineWidth = 1;
+    for (var f = 0; f < 520; f++) {
+      ctx.strokeStyle = r() > 0.5 ? 'rgba(85, 52, 18, 0.065)' : 'rgba(255, 248, 230, 0.08)';
+      var fx = r() * W, fy = r() * H, fl = 10 + r() * 34;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + fl, fy + (r() - 0.5) * 6);
+      ctx.stroke();
+    }
+
+    // Линии сгиба
+    if (item.fold) {
+      ctx.fillStyle = 'rgba(60, 35, 10, 0.13)';
+      ctx.fillRect(0, H * 0.495, W, H * 0.008);
+      ctx.fillStyle = 'rgba(255, 250, 230, 0.20)';
+      ctx.fillRect(0, H * 0.503, W, H * 0.006);
+
+      ctx.fillStyle = 'rgba(60, 35, 10, 0.11)';
+      ctx.fillRect(W * 0.33, 0, W * 0.007, H);
+    }
+
+    // Клякса туши
+    if (item.blot) {
+      var bx = item.blot.x * W, by = item.blot.y * H, br = item.blot.r * (W / 380);
+      ctx.fillStyle = 'rgba(20, 12, 6, 0.82)';
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx + br * 0.85, by - br * 0.45, br * 0.42, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx - br * 0.5, by + br * 0.75, br * 0.3, 0, Math.PI * 2); ctx.fill();
+    }
+
+    var padX = W * 0.09;
+    var padY = H * 0.095;
+    ctx.fillStyle = pal.ink;
+    ctx.textBaseline = 'top';
+
+    if (item.type === 'title') {
+      ctx.font = Math.round(W * 0.048) + "px 'Yuji Boku', serif";
+      ctx.fillStyle = 'rgba(43, 27, 15, 0.82)';
+      ctx.fillText(item.kanjiTop, padX, padY);
+
+      ctx.fillStyle = pal.ink;
+      ctx.font = Math.round(W * 0.13) + "px 'Marck Script', cursive";
+      ctx.fillText('Дыхание', padX, padY + H * 0.11);
+      ctx.fillText('Ямаоки', padX, padY + H * 0.24);
+
+      ctx.font = Math.round(W * 0.056) + "px 'Bad Script', cursive";
+      ctx.fillStyle = '#3a2d22';
+      ctx.fillText(item.sub, padX, padY + H * 0.41);
+
+      ctx.font = Math.round(W * 0.046) + "px 'Caveat', cursive";
+      ctx.fillStyle = '#5b5044';
+      wrapParagraph(ctx, item.hint, padX, H * 0.70, W * 0.65, H * 0.055);
+    } else if (item.type === 'strip') {
+      ctx.save();
+      ctx.fillStyle = pal.ink;
+      ctx.font = Math.round(W * 0.34) + "px 'Yuji Boku', serif";
+      ctx.textAlign = 'center';
+      var chars = item.num.split('');
+      var startY = H * 0.12;
+      var stepY = (H * 0.76) / chars.length;
+      chars.forEach(function (ch, idx) {
+        ctx.fillText(ch, W * 0.5, startY + idx * stepY);
+      });
+      ctx.restore();
+    } else if (item.type === 'scrap') {
+      ctx.save();
+      ctx.strokeStyle = '#2b1b0f';
+      ctx.lineWidth = W * 0.012;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(W * 0.08, H * 0.80);
+      ctx.lineTo(W * 0.28, H * 0.54);
+      ctx.lineTo(W * 0.36, H * 0.62);
+      ctx.lineTo(W * 0.55, H * 0.25);
+      ctx.lineTo(W * 0.71, H * 0.47);
+      ctx.lineTo(W * 0.80, H * 0.38);
+      ctx.lineTo(W * 0.94, H * 0.80);
+      ctx.stroke();
+
+      // Пунктир тропы восхождения
+      ctx.setLineDash([5, 9]);
+      ctx.beginPath();
+      ctx.moveTo(W * 0.22, H * 0.79);
+      ctx.quadraticCurveTo(W * 0.42, H * 0.58, W * 0.55, H * 0.28);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Язык пламени на вершине
+      ctx.fillStyle = 'rgba(168, 58, 28, 0.68)';
+      ctx.beginPath();
+      ctx.arc(W * 0.55, H * 0.21, W * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (item.type === 'lore') {
+      ctx.font = Math.round(W * 0.105) + 'px ' + pal.font;
+      ctx.fillText(item.num, padX, padY * 0.75);
+
+      ctx.save();
+      ctx.font = '700 ' + Math.round(W * 0.052) + "px 'Caveat', cursive";
+      ctx.fillStyle = '#5b5043';
+      ctx.textAlign = 'right';
+      ctx.fillText(item.tag, W - padX, padY * 1.05);
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(75, 45, 15, 0.22)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padX, padY + H * 0.095);
+      ctx.lineTo(W - padX, padY + H * 0.095);
+      ctx.stroke();
+
+      ctx.fillStyle = pal.ink;
+      var fontSize = Math.round(W * 0.0365);
+      ctx.font = fontSize + 'px ' + pal.font;
+      var curY = padY + H * 0.125;
+      var lineH = fontSize * 1.40;
+      for (var pIdx = 0; pIdx < item.paragraphs.length; pIdx++) {
+        curY = wrapParagraph(ctx, item.paragraphs[pIdx], padX, curY, W - padX * 2, lineH);
+        curY += fontSize * 0.42;
+        if (curY > H * 0.87) break;
+      }
+
+      ctx.font = '700 ' + Math.round(W * 0.05) + "px 'Caveat', cursive";
+      ctx.fillStyle = '#4a3a2a';
+      ctx.textAlign = 'right';
+      ctx.fillText('читать…', W - padX, H * 0.90);
+      ctx.textAlign = 'left';
+
+      if (item.mark) {
+        ctx.font = '700 ' + Math.round(W * 0.095) + "px 'Caveat', cursive";
+        ctx.fillStyle = 'rgba(91, 85, 77, 0.72)';
+        ctx.fillText(item.mark, padX, H * 0.87);
+      }
+    } else if (item.type === 'cd') {
+      ctx.font = '700 ' + Math.round(W * 0.068) + "px 'Caveat', cursive";
+      ctx.fillText(item.num, padX, padY * 0.8);
+
+      ctx.strokeStyle = 'rgba(75, 45, 15, 0.28)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padX, padY + H * 0.08);
+      ctx.lineTo(W - padX, padY + H * 0.08);
+      ctx.stroke();
+
+      var cdFont = Math.round(W * 0.041);
+      ctx.font = cdFont + 'px ' + pal.font;
+      var cy = padY + H * 0.115;
+      var stepH = (H * 0.74) / item.cdList.length;
+      item.cdList.forEach(function (row) {
+        var isGoal = goalKey === row[0];
+        ctx.fillStyle = isGoal ? '#8a2a1c' : pal.ink;
+        ctx.textAlign = 'left';
+        ctx.fillText(row[0], padX, cy);
+        ctx.textAlign = 'right';
+        ctx.fillText(row[1], W - padX, cy);
+        ctx.strokeStyle = isGoal ? 'rgba(138, 42, 28, 0.55)' : 'rgba(75, 45, 15, 0.18)';
+        ctx.beginPath();
+        ctx.moveTo(padX, cy + cdFont * 1.25);
+        ctx.lineTo(W - padX, cy + cdFont * 1.25);
+        ctx.stroke();
+        cy += stepH;
+      });
+      ctx.textAlign = 'left';
+    } else if (item.type === 'rank') {
+      ctx.font = '700 ' + Math.round(W * 0.072) + "px 'Caveat', cursive";
+      ctx.fillStyle = pal.ink;
+      ctx.fillText(item.num, padX, padY * 0.82);
+
+      ctx.strokeStyle = 'rgba(75, 45, 15, 0.28)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padX, padY + H * 0.09);
+      ctx.lineTo(W - padX, padY + H * 0.09);
+      ctx.stroke();
+
+      var rFont = Math.round(W * 0.046);
+      ctx.font = rFont + 'px ' + pal.font;
+      var ry = padY + H * 0.14;
+      var rLineH = rFont * 1.42;
+
+      item.tasks.forEach(function (tText, tIdx) {
+        var tKey = item.num + '::' + tIdx;
+        var isDone = !!doneTasks[tKey];
+        ctx.fillStyle = isDone ? 'rgba(92, 70, 50, 0.65)' : pal.ink;
+        var startY = ry;
+        ry = wrapParagraph(ctx, '• ' + tText, padX, ry, W - padX * 2, rLineH);
+        if (isDone) {
+          ctx.strokeStyle = 'rgba(145, 32, 20, 0.85)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(padX, startY + rFont * 0.65);
+          ctx.lineTo(W - padX * 1.3, startY + rFont * 0.55);
+          ctx.stroke();
+        }
+        ry += rFont * 0.35;
+      });
+    }
+
+    // Красная квадратная печать Ханко (炎)
+    if (item.hanko) {
+      ctx.save();
+      var hx = W * 0.77, hy = H * 0.77, hs = W * 0.14;
+      ctx.translate(hx + hs * 0.5, hy + hs * 0.5);
+      ctx.rotate(-0.14);
+      ctx.strokeStyle = 'rgba(163, 42, 29, 0.85)';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(-hs * 0.5, -hs * 0.5, hs, hs);
+      ctx.fillStyle = 'rgba(163, 42, 29, 0.85)';
+      ctx.font = Math.round(hs * 0.72) + "px 'Yuji Boku', serif";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('炎', 0, 2);
+      ctx.restore();
+    }
+
+    // Круглая печать «ЦЕЛЬ» на выбранном ранге
+    if (item.type === 'rank' && goalKey === item.num) {
+      ctx.save();
+      var gx = W * 0.80, gy = H * 0.78, gr = W * 0.105;
+      ctx.translate(gx, gy);
+      ctx.rotate(-0.22);
+      ctx.strokeStyle = 'rgba(163, 42, 29, 0.9)';
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(0, 0, gr, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, gr * 0.84, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(163, 42, 29, 0.92)';
+      ctx.font = '700 ' + Math.round(gr * 0.78) + "px 'Caveat', cursive";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('цель', 0, 0);
+      ctx.restore();
+    }
+
+    // Прорисовываем тонкую рваную кромку вдоль краёв
+    ctx.strokeStyle = 'rgba(42, 20, 4, 0.62)';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    pts.forEach(function (p, idx) {
+      if (idx === 0) ctx.moveTo(p[0] * W, p[1] * H);
+      else ctx.lineTo(p[0] * W, p[1] * H);
+    });
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.restore();
+    return cv;
+  }
+
+  /* ==========================================================================
+     5. ПРОЦЕДУРНЫЕ ВЫСОКОДЕТАЛЬНЫЕ ТЕКСТУРЫ И BUMP-КАРТЫ ОКРУЖЕНИЯ
+     ========================================================================== */
+  function createWoodTextures() {
+    var cv = document.createElement('canvas');
+    cv.width = 1024; cv.height = 1024;
+    var ctx = cv.getContext('2d');
+
+    var bCv = document.createElement('canvas');
+    bCv.width = 1024; bCv.height = 1024;
+    var bCtx = bCv.getContext('2d');
+
+    ctx.fillStyle = '#25150b';
+    ctx.fillRect(0, 0, 1024, 1024);
+    bCtx.fillStyle = '#808080';
+    bCtx.fillRect(0, 0, 1024, 1024);
+
+    var r = rng(42);
+    // Годовые кольца и волокна старого кедра
+    for (var i = 0; i < 900; i++) {
+      var y = r() * 1024;
+      var h = 1 + r() * 3.5;
+      var dark = r() > 0.42;
+      ctx.fillStyle = dark
+        ? 'rgba(12, 6, 2, ' + (0.08 + r() * 0.16).toFixed(3) + ')'
+        : 'rgba(92, 54, 24, ' + (0.05 + r() * 0.10).toFixed(3) + ')';
+      ctx.fillRect(0, y, 1024, h);
+
+      bCtx.fillStyle = dark ? 'rgba(40,40,40,0.18)' : 'rgba(210,210,210,0.14)';
+      bCtx.fillRect(0, y, 1024, h);
+    }
+
+    // Древесные сучки
+    for (var k = 0; k < 9; k++) {
+      var kx = 80 + r() * 860, ky = 60 + r() * 900, kr = 18 + r() * 38;
+      var kg = ctx.createRadialGradient(kx, ky, 2, kx, ky, kr);
+      kg.addColorStop(0, 'rgba(10, 4, 1, 0.72)');
+      kg.addColorStop(0.5, 'rgba(38, 20, 8, 0.35)');
+      kg.addColorStop(1, 'rgba(38, 20, 8, 0)');
+      ctx.fillStyle = kg;
+      ctx.beginPath(); ctx.ellipse(kx, ky, kr * 2.4, kr * 0.65, 0, 0, Math.PI * 2); ctx.fill();
+
+      var bkg = bCtx.createRadialGradient(kx, ky, 2, kx, ky, kr);
+      bkg.addColorStop(0, 'rgba(20, 20, 20, 0.65)');
+      bkg.addColorStop(1, 'rgba(128, 128, 128, 0)');
+      bCtx.fillStyle = bkg;
+      bCtx.beginPath(); bCtx.ellipse(kx, ky, kr * 2.2, kr * 0.6, 0, 0, Math.PI * 2); bCtx.fill();
+    }
+
+    // Глубокие фаски между массивными досками стола
+    [204, 412, 618, 824].forEach(function (py) {
+      ctx.fillStyle = 'rgba(2, 1, 0, 0.88)';
+      ctx.fillRect(0, py, 1024, 5);
+      ctx.fillStyle = 'rgba(120, 78, 38, 0.16)';
+      ctx.fillRect(0, py + 5, 1024, 2);
+
+      bCtx.fillStyle = '#080808';
+      bCtx.fillRect(0, py - 1, 1024, 7);
+      bCtx.fillStyle = '#dcdcdc';
+      bCtx.fillRect(0, py + 6, 1024, 3);
+    });
+
+    var map = new THREE.CanvasTexture(cv);
+    var bump = new THREE.CanvasTexture(bCv);
+    map.wrapS = map.wrapT = bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = 4;
+    return { map: map, bump: bump };
+  }
+
+  function createTatamiTextures() {
+    var cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 512;
+    var ctx = cv.getContext('2d');
+
+    var bCv = document.createElement('canvas');
+    bCv.width = 512; bCv.height = 512;
+    var bCtx = bCv.getContext('2d');
+
+    ctx.fillStyle = '#383522';
+    ctx.fillRect(0, 0, 512, 512);
+    bCtx.fillStyle = '#808080';
+    bCtx.fillRect(0, 0, 512, 512);
+
+    // Плетение тростника игуса
+    for (var y = 0; y < 512; y += 3) {
+      ctx.fillStyle = (y % 6 === 0) ? 'rgba(20, 19, 10, 0.34)' : 'rgba(95, 88, 52, 0.16)';
+      ctx.fillRect(0, y, 512, 1.8);
+      bCtx.fillStyle = (y % 6 === 0) ? '#454545' : '#b8b8b8';
+      bCtx.fillRect(0, y, 512, 1.5);
+    }
+    for (var x = 0; x < 512; x += 16) {
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(x, 0, 2, 512);
+    }
+
+    // Парчовая кайма татами (хэри) с традиционным ромбовидным узором
+    ctx.fillStyle = '#17120e';
+    ctx.fillRect(0, 0, 512, 22);
+    ctx.fillRect(0, 490, 512, 22);
+    ctx.fillRect(0, 0, 18, 512);
+    ctx.fillRect(494, 0, 18, 512);
+
+    ctx.strokeStyle = 'rgba(165, 122, 54, 0.45)';
+    ctx.lineWidth = 1.5;
+    for (var hx = 18; hx < 494; hx += 16) {
+      ctx.strokeRect(hx + 3, 5, 10, 10);
+      ctx.strokeRect(hx + 3, 495, 10, 10);
+    }
+
+    var map = new THREE.CanvasTexture(cv);
+    var bump = new THREE.CanvasTexture(bCv);
+    map.wrapS = map.wrapT = bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(6, 5);
+    bump.repeat.set(6, 5);
+    return { map: map, bump: bump };
+  }
+
+  function createShojiTexture() {
+    var cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 512;
+    var ctx = cv.getContext('2d');
+    var g = ctx.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, '#1e2836');
+    g.addColorStop(0.5, '#2b3644');
+    g.addColorStop(1, '#1a1e24');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Силуэты ветвей бамбука за бумажной перегородкой в лунном свете
+    ctx.save();
+    ctx.strokeStyle = 'rgba(10, 14, 20, 0.42)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(90, 512); ctx.quadraticCurveTo(130, 260, 195, 20);
+    ctx.moveTo(360, 512); ctx.quadraticCurveTo(330, 280, 290, 40);
+    ctx.stroke();
+    // Листья бамбука
+    ctx.fillStyle = 'rgba(10, 14, 20, 0.36)';
+    [[140, 220, 0.4], [155, 190, -0.3], [175, 130, 0.5], [335, 260, -0.5], [315, 180, 0.3]].forEach(function (lf) {
+      ctx.save();
+      ctx.translate(lf[0], lf[1]);
+      ctx.rotate(lf[2]);
+      ctx.beginPath(); ctx.ellipse(0, 0, 28, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+
+    // Деревянная решётка кумико
+    ctx.fillStyle = '#140c06';
+    for (var x = 0; x <= 512; x += 64) ctx.fillRect(x - 3, 0, 6, 512);
+    for (var y = 0; y <= 512; y += 42) ctx.fillRect(0, y - 2.5, 512, 5);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function createParticleGlowTexture() {
+    var cv = document.createElement('canvas');
+    cv.width = 64; cv.height = 64;
+    var ctx = cv.getContext('2d');
+    var g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    g.addColorStop(0.28, 'rgba(255, 225, 165, 0.85)');
+    g.addColorStop(0.65, 'rgba(255, 150, 60, 0.25)');
+    g.addColorStop(1, 'rgba(255, 120, 30, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function createTsukaWrapTexture() {
+    var cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 64;
+    var ctx = cv.getContext('2d');
+    // Белая кожа ската (самэгава) под оплёткой
+    ctx.fillStyle = '#d8cdb8';
+    ctx.fillRect(0, 0, 256, 64);
+    // Тёмно-бордовая шёлковая оплётка цука-ито ромбами
+    ctx.fillStyle = '#6e160e';
+    ctx.strokeStyle = '#290603';
+    ctx.lineWidth = 2;
+    for (var x = -16; x < 272; x += 28) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x + 18, 32); ctx.lineTo(x, 64); ctx.lineTo(x - 10, 64); ctx.lineTo(x + 8, 32); ctx.lineTo(x - 10, 0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x + 14, 0); ctx.lineTo(x - 4, 32); ctx.lineTo(x + 14, 64); ctx.lineTo(x + 24, 64); ctx.lineTo(x + 6, 32); ctx.lineTo(x + 24, 0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    var tex = new THREE.CanvasTexture(cv);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  /* ==========================================================================
+     6. ИНИЦИАЛИЗАЦИЯ THREE.JS СЦЕНЫ, КАМЕРЫ И МЯГКИХ ТЕНЕЙ
+     ========================================================================== */
+  var container = document.getElementById('webgl-container');
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x060301);
+  scene.fog = new THREE.FogExp2(0x070402, 0.105);
+
+  var camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.05, 30);
+  var renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+  container.appendChild(renderer.domElement);
+
+  var DESK_Y = 0.78;
+  var DESK_W = 3.65;
+  var DESK_D = 1.78;
+
+  /* ==========================================================================
+     7. ПОСТРОЕНИЕ ТРАДИЦИОННОЙ КОМНАТЫ ВАСИЦУ И МЕБЕЛИ ЭПОХИ ТАЙСЁ
+     ========================================================================== */
+  var woodTex = createWoodTextures();
+  var tatamiTex = createTatamiTextures();
+  var shojiTex = createShojiTexture();
+  var paperBumpTex = createPaperBumpTexture();
+
+  var darkWoodMat = new THREE.MeshStandardMaterial({
+    map: woodTex.map,
+    bumpMap: woodTex.bump,
+    bumpScale: 0.006,
+    roughness: 0.58,
+    metalness: 0.06
+  });
+  var pillarWoodMat = new THREE.MeshStandardMaterial({
+    color: 0x1b1008,
+    bumpMap: woodTex.bump,
+    bumpScale: 0.004,
+    roughness: 0.72
+  });
+  var ironMat = new THREE.MeshStandardMaterial({
+    color: 0x1c1e21,
+    bumpMap: paperBumpTex,
+    bumpScale: 0.005,
+    roughness: 0.42,
+    metalness: 0.82
+  });
+  var brassMat = new THREE.MeshStandardMaterial({
+    color: 0xd8a23c,
+    roughness: 0.26,
+    metalness: 0.88
+  });
+
+  // Пол из татами
+  var floorGeo = new THREE.PlaneGeometry(9.6, 8.0);
+  var floorMat = new THREE.MeshStandardMaterial({
+    map: tatamiTex.map,
+    bumpMap: tatamiTex.bump,
+    bumpScale: 0.005,
+    roughness: 0.86
+  });
+  var floorMesh = new THREE.Mesh(floorGeo, floorMat);
+  floorMesh.rotation.x = -Math.PI / 2;
+  floorMesh.receiveShadow = true;
+  scene.add(floorMesh);
+
+  // Потолок с деревянными кессонными балками
+  var ceilMesh = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 8.0), new THREE.MeshStandardMaterial({ color: 0x0e0804, roughness: 0.9 }));
+  ceilMesh.rotation.x = Math.PI / 2;
+  ceilMesh.position.y = 3.8;
+  scene.add(ceilMesh);
+
+  for (var bx = -4.0; bx <= 4.0; bx += 1.6) {
+    var beam = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 8.0), pillarWoodMat);
+    beam.position.set(bx, 3.73, 0);
+    scene.add(beam);
+  }
+
+  // Стены (песчаная штукатурка дзюраку с рельефом)
+  var wallMat = new THREE.MeshStandardMaterial({
+    color: 0x1e150e,
+    bumpMap: paperBumpTex,
+    bumpScale: 0.004,
+    roughness: 0.92
+  });
+  var backWall = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 3.8), wallMat);
+  backWall.position.set(0, 1.9, -3.5);
+  backWall.receiveShadow = true;
+  scene.add(backWall);
+
+  var frontWall = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 3.8), wallMat);
+  frontWall.rotation.y = Math.PI;
+  frontWall.position.set(0, 1.9, 3.5);
+  scene.add(frontWall);
+
+  var leftWall = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 3.8), wallMat);
+  leftWall.rotation.y = Math.PI / 2;
+  leftWall.position.set(-4.8, 1.9, 0);
+  scene.add(leftWall);
+
+  var rightWall = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 3.8), wallMat);
+  rightWall.rotation.y = -Math.PI / 2;
+  rightWall.position.set(4.8, 1.9, 0);
+  scene.add(rightWall);
+
+  // Деревянные опорные колонны и горизонтальные балки нагэси
+  var pillarGeo = new THREE.BoxGeometry(0.16, 3.8, 0.16);
+  [[-4.7, -3.4], [-2.2, -3.4], [0, -3.4], [2.2, -3.4], [4.7, -3.4], [-4.7, 3.4], [4.7, 3.4]].forEach(function (pos) {
+    var p = new THREE.Mesh(pillarGeo, pillarWoodMat);
+    p.position.set(pos[0], 1.9, pos[1]);
+    p.castShadow = true;
+    scene.add(p);
+  });
+  var nageshiBack = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.11, 0.12), pillarWoodMat);
+  nageshiBack.position.set(0, 2.85, -3.44);
+  scene.add(nageshiBack);
+
+  // Светящиеся перегородки сёдзи на левой и правой стенах с силуэтами бамбука
+  var shojiMat = new THREE.MeshStandardMaterial({
+    map: shojiTex,
+    roughness: 0.65,
+    emissive: new THREE.Color(0x162436),
+    emissiveIntensity: 0.55
+  });
+  var shojiLeft = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.45), shojiMat);
+  shojiLeft.rotation.y = Math.PI / 2;
+  shojiLeft.position.set(-4.77, 1.5, -0.3);
+  scene.add(shojiLeft);
+
+  var shojiRight = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.45), shojiMat);
+  shojiRight.rotation.y = -Math.PI / 2;
+  shojiRight.position.set(4.77, 1.5, -0.3);
+  scene.add(shojiRight);
+
+  // Ниша Токонома у задней стены (возвышение, изогнутый столб токобасира и каллиграфические свитки какэдзику)
+  var tokonomaBase = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.14, 0.85), darkWoodMat);
+  tokonomaBase.position.set(0, 0.07, -3.08);
+  tokonomaBase.receiveShadow = true;
+  scene.add(tokonomaBase);
+
+  function createHangingScroll(kanjiChar, subText, xPos) {
+    var g = new THREE.Group();
+    var cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 768;
+    var ctx = cv.getContext('2d');
+    // Шёлковое обрамление свитка
+    ctx.fillStyle = '#382417';
+    ctx.fillRect(0, 0, 256, 768);
+    ctx.strokeStyle = '#9c783c';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, 236, 748);
+    // Внутреннее бумажное полотно
+    ctx.fillStyle = '#d8c396';
+    ctx.fillRect(24, 88, 208, 592);
+    // Тушевая каллиграфия
+    ctx.fillStyle = '#1c1108';
+    ctx.font = "168px 'Yuji Boku', serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(kanjiChar, 128, 305);
+    ctx.font = "34px 'Yuji Boku', serif";
+    ctx.fillText(subText, 128, 520);
+    // Красная печать мастера на свитке
+    ctx.strokeStyle = '#a32a1d';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(108, 580, 40, 40);
+    ctx.fillStyle = '#a32a1d';
+    ctx.font = "26px 'Yuji Boku', serif";
+    ctx.fillText('炎', 128, 600);
+
+    var tex = new THREE.CanvasTexture(cv);
+    var cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 1.95), new THREE.MeshStandardMaterial({ map: tex, bumpMap: paperBumpTex, bumpScale: 0.002, roughness: 0.8 }));
+    g.add(cloth);
+
+    // Деревянные валики сверху и снизу с латунными наконечниками
+    var rodTop = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.78, 16), pillarWoodMat);
+    rodTop.rotation.z = Math.PI / 2;
+    rodTop.position.set(0, 0.98, 0.015);
+    g.add(rodTop);
+
+    var rodBot = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.82, 16), pillarWoodMat);
+    rodBot.rotation.z = Math.PI / 2;
+    rodBot.position.set(0, -0.98, 0.02);
+    g.add(rodBot);
+
+    [-0.41, 0.41].forEach(function (rx) {
+      var cap = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.04, 16), brassMat);
+      cap.rotation.z = Math.PI / 2;
+      cap.position.set(rx, -0.98, 0.02);
+      g.add(cap);
+    });
+
+    g.position.set(xPos, 1.85, -3.45);
+    return g;
+  }
+  scene.add(createHangingScroll('炎', 'Восхождение', -1.08));
+  scene.add(createHangingScroll('山', 'Ямаоки', 1.08));
+
+  // Японский комод Тансу с кованой фурнитурой у дальней стены
+  function createTansuChest(x, z) {
+    var g = new THREE.Group();
+    var body = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.92, 0.48), darkWoodMat);
+    body.position.y = 0.46;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    g.add(body);
+
+    // Выдвижные ящики и железные ручки
+    for (var row = 0; row < 3; row++) {
+      var dy = 0.18 + row * 0.28;
+      var drawer = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.23, 0.03), pillarWoodMat);
+      drawer.position.set(0, dy, 0.245);
+      g.add(drawer);
+
+      [-0.28, 0.28].forEach(function (hx) {
+        var plate = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.06, 0.015), ironMat);
+        plate.position.set(hx, dy, 0.265);
+        g.add(plate);
+        var handle = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.005, 8, 16, Math.PI), ironMat);
+        handle.rotation.x = Math.PI;
+        handle.position.set(hx, dy - 0.005, 0.275);
+        g.add(handle);
+      });
+    }
+    g.position.set(x, 0, z);
+    return g;
+  }
+  scene.add(createTansuChest(-3.3, -2.95));
+
+  // Напольные деревянные светильники Андон в углах комнаты
+  function createFloorAndon(x, z) {
+    var g = new THREE.Group();
+    var base = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.06, 0.38), pillarWoodMat);
+    base.position.y = 0.03;
+    g.add(base);
+    [[-0.16, -0.16], [0.16, -0.16], [0.16, 0.16], [-0.16, 0.16]].forEach(function (c) {
+      var post = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.88, 0.028), pillarWoodMat);
+      post.position.set(c[0], 0.46, c[1]);
+      g.add(post);
+    });
+    var shade = new THREE.Mesh(
+      new THREE.BoxGeometry(0.30, 0.62, 0.30),
+      new THREE.MeshStandardMaterial({ color: 0xffdf9e, emissive: 0xff8828, emissiveIntensity: 0.75, roughness: 0.5 })
+    );
+    shade.position.y = 0.52;
+    g.add(shade);
+    var pLight = new THREE.PointLight(0xff8c30, 0.55, 4.2, 2);
+    pLight.position.set(0, 0.52, 0);
+    g.add(pLight);
+    g.position.set(x, 0, z);
+    return g;
+  }
+  scene.add(createFloorAndon(-4.15, -2.85));
+  scene.add(createFloorAndon(4.15, -2.85));
+
+  // Жаровня Хибати с раскалёнными углями и чугунной треногой готоку
+  var hibachiGroup = new THREE.Group();
+  var hibachiOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.29, 0.38, 28), darkWoodMat);
+  hibachiOuter.position.y = 0.19;
+  hibachiOuter.castShadow = true;
+  hibachiGroup.add(hibachiOuter);
+
+  var hibachiRim = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.025, 12, 28), ironMat);
+  hibachiRim.rotation.x = Math.PI / 2;
+  hibachiRim.position.y = 0.38;
+  hibachiGroup.add(hibachiRim);
+
+  var ashBed = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.04, 24), new THREE.MeshStandardMaterial({ color: 0x383430, roughness: 0.98 }));
+  ashBed.position.y = 0.36;
+  hibachiGroup.add(ashBed);
+
+  // Мерцающие угли внутри жаровни
+  var coalMat = new THREE.MeshStandardMaterial({ color: 0x2a0802, emissive: 0xff3b08, emissiveIntensity: 1.5, roughness: 0.7 });
+  for (var cIdx = 0; cIdx < 8; cIdx++) {
+    var coal = new THREE.Mesh(new THREE.DodecahedronGeometry(0.035 + (cIdx % 3) * 0.012, 0), coalMat);
+    var ca = (cIdx / 8) * Math.PI * 2;
+    var cr = (cIdx % 2 === 0) ? 0.04 : 0.11;
+    coal.position.set(Math.cos(ca) * cr, 0.38, Math.sin(ca) * cr);
+    coal.rotation.set(cIdx, cIdx * 0.7, 0);
+    hibachiGroup.add(coal);
+  }
+  var gotokuRing = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.008, 8, 20), ironMat);
+  gotokuRing.rotation.x = Math.PI / 2;
+  gotokuRing.position.y = 0.42;
+  hibachiGroup.add(gotokuRing);
+
+  hibachiGroup.position.set(2.85, 0, -1.65);
+  scene.add(hibachiGroup);
+
+  var hibachiLight = new THREE.PointLight(0xff4d12, 0.85, 4.5, 2);
+  hibachiLight.position.set(2.85, 0.56, -1.65);
+  scene.add(hibachiLight);
+
+  /* ==========================================================================
+     8. МАССИВНЫЙ СТОЛ МЕЧНИКА (ХИНОКИ) И ПОДУШКИ ДЗАБУТОН
+     ========================================================================== */
+  var deskGroup = new THREE.Group();
+  scene.add(deskGroup);
+
+  var deskTopGeo = new THREE.BoxGeometry(DESK_W, 0.085, DESK_D);
+  var deskTopMesh = new THREE.Mesh(deskTopGeo, darkWoodMat);
+  deskTopMesh.position.set(0, DESK_Y - 0.0425, 0);
+  deskTopMesh.castShadow = true;
+  deskTopMesh.receiveShadow = true;
+  deskGroup.add(deskTopMesh);
+
+  // Резная окантовка и ножки с проножками
+  var apronGeo = new THREE.BoxGeometry(DESK_W - 0.14, 0.11, DESK_D - 0.14);
+  var apronMesh = new THREE.Mesh(apronGeo, pillarWoodMat);
+  apronMesh.position.set(0, DESK_Y - 0.12, 0);
+  deskGroup.add(apronMesh);
+
+  var legGeo = new THREE.BoxGeometry(0.13, DESK_Y - 0.06, 0.13);
+  [[-1.65, -0.74], [1.65, -0.74], [-1.65, 0.74], [1.65, 0.74]].forEach(function (lp) {
+    var leg = new THREE.Mesh(legGeo, pillarWoodMat);
+    leg.position.set(lp[0], (DESK_Y - 0.06) / 2, lp[1]);
+    leg.castShadow = true;
+    leg.receiveShadow = true;
+    deskGroup.add(leg);
+  });
+  [-1.65, 1.65].forEach(function (lx) {
+    var stretcher = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.07, 1.48), pillarWoodMat);
+    stretcher.position.set(lx, 0.18, 0);
+    stretcher.castShadow = true;
+    deskGroup.add(stretcher);
+  });
+
+  // 2 традиционные подушки дзабутон перед столом
+  var zabutonMat = new THREE.MeshStandardMaterial({ color: 0x4f1712, bumpMap: paperBumpTex, bumpScale: 0.004, roughness: 0.88 });
+  [-0.75, 0.85].forEach(function (zx) {
+    var zMesh = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.075, 0.68), zabutonMat);
+    zMesh.position.set(zx, 0.038, 1.28);
+    zMesh.rotation.y = zx < 0 ? 0.07 : -0.05;
+    zMesh.castShadow = true;
+    zMesh.receiveShadow = true;
+    scene.add(zMesh);
+  });
+
+  /* ==========================================================================
+     9. СЛОЖНЫЕ 3D-ПРЕДМЕТЫ НА СТОЛЕ: ФОНАРЬ АНДОН, КАТАНА НИЧИРИН, СУДЗУРИ, ЧАЙНИК И ПЕЧАТЬ
+     ========================================================================== */
+
+  // 1) Традиционный настольный деревянный фонарь Андон (вместо простого цилиндра)
+  var lanternGroup = new THREE.Group();
+  var lBase = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.032, 0.24), pillarWoodMat);
+  lBase.position.y = 0.016;
+  lBase.castShadow = true;
+  lanternGroup.add(lBase);
+
+  var lPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.035, 24), darkWoodMat);
+  lPedestal.position.y = 0.045;
+  lanternGroup.add(lPedestal);
+
+  // Латунная масляная чашечка внутри фонаря
+  var oilDish = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.04, 0.025, 20), brassMat);
+  oilDish.position.y = 0.07;
+  lanternGroup.add(oilDish);
+
+  // 4 резные угловые стойки фонаря и верхняя дужка-ручка
+  [[-0.095, -0.095], [0.095, -0.095], [0.095, 0.095], [-0.095, 0.095]].forEach(function (cp) {
+    var post = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.30, 0.016), pillarWoodMat);
+    post.position.set(cp[0], 0.17, cp[1]);
+    post.castShadow = true;
+    lanternGroup.add(post);
+  });
+  var lTopFrame = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.22), pillarWoodMat);
+  lTopFrame.position.y = 0.315;
+  lanternGroup.add(lTopFrame);
+
+  var lHandleArch = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.016, 0.024), pillarWoodMat);
+  lHandleArch.position.y = 0.36;
+  lanternGroup.add(lHandleArch);
+  [-0.095, 0.095].forEach(function (hx) {
+    var hSupport = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.045, 0.02), pillarWoodMat);
+    hSupport.position.set(hx, 0.338, 0);
+    lanternGroup.add(hSupport);
+  });
+
+  // Светящийся цилиндр из бумаги васи с деревянными кольцами кумико
+  var lanternPaperMat = new THREE.MeshStandardMaterial({
+    color: 0xffe8ba,
+    emissive: new THREE.Color(0xff9436),
+    emissiveIntensity: 0.92,
+    bumpMap: paperBumpTex,
+    bumpScale: 0.002,
+    roughness: 0.45,
+    transparent: true,
+    opacity: 0.93
+  });
+  var lShade = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.088, 0.23, 28, 1, true), lanternPaperMat);
+  lShade.position.y = 0.185;
+  lanternGroup.add(lShade);
+
+  // Тонкие деревянные обручи вокруг абажура
+  [0.08, 0.15, 0.22, 0.29].forEach(function (ry) {
+    var rib = new THREE.Mesh(new THREE.TorusGeometry(0.090, 0.0045, 8, 28), pillarWoodMat);
+    rib.rotation.x = Math.PI / 2;
+    rib.position.y = ry;
+    lanternGroup.add(rib);
+  });
+
+  // Живой язычок пламени внутри фонаря
+  var flameCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  var flameOuterMat = new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true, opacity: 0.75 });
+  var flameMesh = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.048, 12), flameCoreMat);
+  flameMesh.position.y = 0.115;
+  var flameHalo = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.068, 12), flameOuterMat);
+  flameHalo.position.y = 0.118;
+  lanternGroup.add(flameMesh);
+  lanternGroup.add(flameHalo);
+
+  lanternGroup.position.set(-1.54, DESK_Y, -0.62);
+  lanternGroup.rotation.y = 0.35;
+  deskGroup.add(lanternGroup);
+
+  // 2) Изогнутая катана Ничирин на резной подставке Катана-какэ (сверху в центре стола)
+  var katanaGroup = new THREE.Group();
+
+  // Двухъярусная резная подставка Катана-какэ
+  [-0.24, 0.24].forEach(function (sx) {
+    var foot = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.024, 0.17), pillarWoodMat);
+    foot.position.set(sx, 0.012, 0);
+    foot.castShadow = true;
+    katanaGroup.add(foot);
+
+    var upright = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.165, 0.055), pillarWoodMat);
+    upright.position.set(sx, 0.092, 0);
+    upright.castShadow = true;
+    katanaGroup.add(upright);
+
+    // Рога-ложементы для меча
+    var cradleL = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.028, 0.018), pillarWoodMat);
+    cradleL.position.set(sx, 0.18, -0.022);
+    katanaGroup.add(cradleL);
+    var cradleR = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.028, 0.018), pillarWoodMat);
+    cradleR.position.set(sx, 0.18, 0.022);
+    katanaGroup.add(cradleR);
+  });
+  var standCrossbar = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.028, 0.022), darkWoodMat);
+  standCrossbar.position.set(0, 0.055, 0);
+  katanaGroup.add(standCrossbar);
+
+  // Сам меч с традиционным изгибом сори (собран по дуге)
+  var swordAssembly = new THREE.Group();
+  var scabbardMat = new THREE.MeshStandardMaterial({ color: 0x120b09, roughness: 0.24, metalness: 0.2 });
+  var bladeSteelMat = new THREE.MeshStandardMaterial({ color: 0xdce6f2, roughness: 0.14, metalness: 0.94 });
+  var tsukaWrapTex = createTsukaWrapTexture();
+  var tsukaMat = new THREE.MeshStandardMaterial({ map: tsukaWrapTex, bumpMap: tsukaWrapTex, bumpScale: 0.004, roughness: 0.65 });
+
+  // Сегментированные изогнутые ножны (сая)
+  for (var seg = 0; seg < 10; seg++) {
+    var t0 = seg / 10, t1 = (seg + 1) / 10;
+    var sx0 = -0.58 + t0 * 0.66;
+    var sx1 = -0.58 + t1 * 0.66;
+    var sy0 = Math.pow(1 - t0, 1.8) * 0.032;
+    var sy1 = Math.pow(1 - t1, 1.8) * 0.032;
+    var segLen = Math.hypot(sx1 - sx0, sy1 - sy0);
+    var sMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.0155, 0.0145, segLen + 0.004, 16), scabbardMat);
+    sMesh.position.set((sx0 + sx1) * 0.5, (sy0 + sy1) * 0.5, 0);
+    sMesh.rotation.z = Math.PI / 2 + Math.atan2(sy1 - sy0, sx1 - sx0);
+    sMesh.scale.set(0.68, 1, 1.15);
+    sMesh.castShadow = true;
+    swordAssembly.add(sMesh);
+  }
+  // Латунный наконечник ножен (кодзири) и ушко куриката с багровым шнуром сагэо
+  var kojiri = new THREE.Mesh(new THREE.CylinderGeometry(0.0145, 0.012, 0.025, 16), brassMat);
+  kojiri.position.set(-0.585, 0.033, 0);
+  kojiri.rotation.z = Math.PI / 2 - 0.08;
+  kojiri.scale.set(0.68, 1, 1.15);
+  swordAssembly.add(kojiri);
+
+  var sageoMat = new THREE.MeshStandardMaterial({ color: 0x8f1d14, roughness: 0.6 });
+  for (var sgIdx = 0; sgIdx < 5; sgIdx++) {
+    var sgRing = new THREE.Mesh(new THREE.TorusGeometry(0.0165, 0.0035, 8, 16), sageoMat);
+    sgRing.rotation.y = Math.PI / 2;
+    sgRing.position.set(-0.16 + sgIdx * 0.008, 0.006, 0);
+    swordAssembly.add(sgRing);
+  }
+
+  // Приоткрытая часть стального клинка и бронзовая муфта хабаки
+  var openBlade = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.022, 0.005), bladeSteelMat);
+  openBlade.position.set(0.125, 0.001, 0);
+  swordAssembly.add(openBlade);
+
+  var habaki = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.026, 0.014), brassMat);
+  habaki.position.set(0.168, 0.001, 0);
+  swordAssembly.add(habaki);
+
+  // Резная гарда (Цуба) с золотым ободом и багровыми лепестками пламени
+  var tsubaDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.007, 24), brassMat);
+  tsubaDisc.rotation.z = Math.PI / 2;
+  tsubaDisc.position.set(0.184, 0.002, 0);
+  tsubaDisc.castShadow = true;
+  swordAssembly.add(tsubaDisc);
+
+  var tsubaInner = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.008, 16), new THREE.MeshStandardMaterial({ color: 0x7c1c12, roughness: 0.4, metalness: 0.5 }));
+  tsubaInner.rotation.z = Math.PI / 2;
+  tsubaInner.position.set(0.184, 0.002, 0);
+  swordAssembly.add(tsubaInner);
+
+  // Рукоять (Цука) с ромбовидной оплёткой цука-ито и навершием касира
+  var tsukaMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.0165, 0.0155, 0.25, 16), tsukaMat);
+  tsukaMesh.rotation.z = Math.PI / 2 + 0.03;
+  tsukaMesh.scale.set(0.72, 1, 1.15);
+  tsukaMesh.position.set(0.312, 0.006, 0);
+  tsukaMesh.castShadow = true;
+  swordAssembly.add(tsukaMesh);
+
+  var kashira = new THREE.Mesh(new THREE.CylinderGeometry(0.0165, 0.015, 0.018, 16), brassMat);
+  kashira.rotation.z = Math.PI / 2 + 0.03;
+  kashira.scale.set(0.72, 1, 1.15);
+  kashira.position.set(0.44, 0.01, 0);
+  swordAssembly.add(kashira);
+
+  swordAssembly.position.set(0.04, 0.172, 0);
+  katanaGroup.add(swordAssembly);
+
+  katanaGroup.position.set(-0.22, DESK_Y, -0.72);
+  katanaGroup.rotation.y = 0.025;
+  deskGroup.add(katanaGroup);
+
+  // 3) Скульптурный набор для каллиграфии: тушечница Судзури, брусок туши Суми, подставка Фудэ-оки, кисть Фудэ и капельница Суйтэки
+  var calligraphyGroup = new THREE.Group();
+  var slateStoneMat = new THREE.MeshStandardMaterial({
+    color: 0x222528,
+    bumpMap: paperBumpTex,
+    bumpScale: 0.003,
+    roughness: 0.52,
+    metalness: 0.18
+  });
+
+  // Основание каменной тушечницы с бортиками
+  var suzuriBase = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.022, 0.23), slateStoneMat);
+  suzuriBase.position.y = 0.011;
+  suzuriBase.castShadow = true;
+  suzuriBase.receiveShadow = true;
+  calligraphyGroup.add(suzuriBase);
+
+  // Бортики вокруг колодца тушечницы
+  var rimF = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.012, 0.02), slateStoneMat);
+  rimF.position.set(0, 0.026, 0.105);
+  calligraphyGroup.add(rimF);
+  var rimB = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.012, 0.02), slateStoneMat);
+  rimB.position.set(0, 0.026, -0.105);
+  calligraphyGroup.add(rimB);
+  var rimL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.012, 0.19), slateStoneMat);
+  rimL.position.set(-0.075, 0.026, 0);
+  calligraphyGroup.add(rimL);
+  var rimR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.012, 0.19), slateStoneMat);
+  rimR.position.set(0.075, 0.026, 0);
+  calligraphyGroup.add(rimR);
+
+  // Зеркальная чёрная жидкая тушь в углублении (уми)
+  var liquidInk = new THREE.Mesh(
+    new THREE.BoxGeometry(0.125, 0.004, 0.095),
+    new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.05, metalness: 0.45 })
+  );
+  liquidInk.position.set(0, 0.023, -0.042);
+  calligraphyGroup.add(liquidInk);
+
+  // Брусок твёрдой туши (Суми) с золотым тиснением, лежащий на краю тушечницы
+  var sumiStick = new THREE.Mesh(
+    new THREE.BoxGeometry(0.032, 0.014, 0.095),
+    new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.38, metalness: 0.25 })
+  );
+  sumiStick.position.set(-0.042, 0.035, 0.045);
+  sumiStick.rotation.set(0.12, 0.38, 0.05);
+  sumiStick.castShadow = true;
+  calligraphyGroup.add(sumiStick);
+
+  // Керамическая подставка под кисть в виде горных вершин (Фудэ-оки)
+  var ceramicMat = new THREE.MeshStandardMaterial({ color: 0x2c3e35, roughness: 0.28, metalness: 0.15 });
+  var fudeOki = new THREE.Group();
+  [-0.028, 0, 0.028].forEach(function (px, idx) {
+    var h = idx === 1 ? 0.028 : 0.020;
+    var peak = new THREE.Mesh(new THREE.ConeGeometry(0.016, h, 12), ceramicMat);
+    peak.position.set(px, h * 0.5, 0);
+    peak.scale.set(1.2, 1, 0.55);
+    peak.castShadow = true;
+    fudeOki.add(peak);
+  });
+  fudeOki.position.set(0.145, 0, 0.02);
+  fudeOki.rotation.y = -0.25;
+  calligraphyGroup.add(fudeOki);
+
+  // Бамбуковая каллиграфическая кисть (Фудэ), лежащая на подставке
+  var fudeBrush = new THREE.Group();
+  var bambooMat = new THREE.MeshStandardMaterial({ color: 0x9c6e34, roughness: 0.48 });
+  var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0065, 0.0055, 0.24, 14), bambooMat);
+  shaft.rotation.z = Math.PI / 2;
+  shaft.castShadow = true;
+  fudeBrush.add(shaft);
+
+  // Костяная муфта и тёмный пучок ворса с каплей туши на кончике
+  var ferrule = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.007, 0.022, 14), new THREE.MeshStandardMaterial({ color: 0x241d18, roughness: 0.35 }));
+  ferrule.rotation.z = Math.PI / 2;
+  ferrule.position.x = -0.125;
+  fudeBrush.add(ferrule);
+
+  var bristles = new THREE.Mesh(new THREE.ConeGeometry(0.0075, 0.042, 14), new THREE.MeshStandardMaterial({ color: 0x090808, roughness: 0.6 }));
+  bristles.rotation.z = Math.PI / 2;
+  bristles.position.x = -0.156;
+  fudeBrush.add(bristles);
+
+  fudeBrush.position.set(0.11, 0.022, 0.045);
+  fudeBrush.rotation.set(0, 0.42, -0.05);
+  calligraphyGroup.add(fudeBrush);
+
+  // Медная капельница для воды (Суйтэки)
+  var suiteki = new THREE.Mesh(new THREE.SphereGeometry(0.026, 18, 14), brassMat);
+  suiteki.scale.set(1, 0.68, 1.15);
+  suiteki.position.set(0.13, 0.017, -0.08);
+  suiteki.castShadow = true;
+  calligraphyGroup.add(suiteki);
+
+  calligraphyGroup.position.set(-0.02, DESK_Y, 0.56);
+  calligraphyGroup.rotation.y = -0.12;
+  deskGroup.add(calligraphyGroup);
+
+  // 4) Резная деревянная печать Ханко и фарфоровая баночка с киноварной пастой Сюнику (справа у листов рангов)
+  var hankoSetGroup = new THREE.Group();
+  var porcelainMat = new THREE.MeshStandardMaterial({ color: 0xe8dec8, roughness: 0.22 });
+  var shunikuDish = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.036, 0.018, 24), porcelainMat);
+  shunikuDish.position.y = 0.009;
+  shunikuDish.castShadow = true;
+  hankoSetGroup.add(shunikuDish);
+
+  var redPaste = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.005, 22), new THREE.MeshStandardMaterial({ color: 0xa82014, roughness: 0.55 }));
+  redPaste.position.y = 0.017;
+  hankoSetGroup.add(redPaste);
+
+  var hankoStamp = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.072, 0.028), darkWoodMat);
+  hankoStamp.position.set(0.068, 0.036, 0.015);
+  hankoStamp.rotation.y = 0.35;
+  hankoStamp.castShadow = true;
+  hankoSetGroup.add(hankoStamp);
+
+  hankoSetGroup.position.set(1.56, DESK_Y, 0.58);
+  deskGroup.add(hankoSetGroup);
+
+  // 5) Чугунный чайник Тэцубин и керамическая пиала Юноми с чаем (на правом верхнем углу стола)
+  var teaGroup = new THREE.Group();
+  var kettleBody = new THREE.Mesh(new THREE.SphereGeometry(0.078, 24, 18), ironMat);
+  kettleBody.scale.set(1, 0.76, 1);
+  kettleBody.position.y = 0.058;
+  kettleBody.castShadow = true;
+  teaGroup.add(kettleBody);
+
+  var kettleLid = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.045, 0.012, 20), brassMat);
+  kettleLid.position.y = 0.116;
+  teaGroup.add(kettleLid);
+
+  var lidKnob = new THREE.Mesh(new THREE.SphereGeometry(0.01, 12, 12), brassMat);
+  lidKnob.position.y = 0.126;
+  teaGroup.add(lidKnob);
+
+  var kettleHandle = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.006, 10, 24, Math.PI), ironMat);
+  kettleHandle.position.y = 0.11;
+  kettleHandle.castShadow = true;
+  teaGroup.add(kettleHandle);
+
+  var kettleSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.018, 0.055, 14), ironMat);
+  kettleSpout.position.set(-0.075, 0.078, 0);
+  kettleSpout.rotation.z = 0.72;
+  teaGroup.add(kettleSpout);
+
+  // Пиала Юноми на деревянной подставке чатаку
+  var saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.038, 0.008, 20), darkWoodMat);
+  saucer.position.set(-0.14, 0.004, 0.075);
+  teaGroup.add(saucer);
+
+  var teacup = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.025, 0.052, 20), ceramicMat);
+  teacup.position.set(-0.14, 0.032, 0.075);
+  teacup.castShadow = true;
+  teaGroup.add(teacup);
+
+  var greenTea = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.004, 18), new THREE.MeshStandardMaterial({ color: 0x3b5224, roughness: 0.12 }));
+  greenTea.position.set(-0.14, 0.055, 0.075);
+  teaGroup.add(greenTea);
+
+  teaGroup.position.set(1.56, DESK_Y, -0.68);
+  deskGroup.add(teaGroup);
+
+  // 6) Свёрнутые архивные свитки на краю стола
+  function createRolledScrollOnDesk(x, z, rotY) {
+    var g = new THREE.Group();
+    var roll = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.024, 0.024, 0.34, 18),
+      new THREE.MeshStandardMaterial({ color: 0xd8c396, bumpMap: paperBumpTex, bumpScale: 0.002, roughness: 0.78 })
+    );
+    roll.rotation.z = Math.PI / 2;
+    roll.position.y = 0.024;
+    roll.castShadow = true;
+    g.add(roll);
+
+    // Алая шёлковая перевязь посередине свитка
+    var tie = new THREE.Mesh(new THREE.CylinderGeometry(0.0255, 0.0255, 0.028, 18), sageoMat);
+    tie.rotation.z = Math.PI / 2;
+    tie.position.y = 0.024;
+    g.add(tie);
+
+    // Деревянные наконечники оси свитка
+    [-0.18, 0.18].forEach(function (rx) {
+      var tip = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.035, 14), pillarWoodMat);
+      tip.rotation.z = Math.PI / 2;
+      tip.position.set(rx, 0.024, 0);
+      g.add(tip);
+    });
+    g.position.set(x, DESK_Y, z);
+    g.rotation.y = rotY;
+    return g;
+  }
+  deskGroup.add(createRolledScrollOnDesk(-1.42, 0.64, 0.42));
+  deskGroup.add(createRolledScrollOnDesk(-1.35, 0.72, 0.18));
+
+  /* ==========================================================================
+     10. ОСВЕЩЕНИЕ СЦЕНЫ (МЯГКИЙ СВЕТ СЁДЗИ, ФОНАРЬ НА СТОЛЕ И СВЕТИЛЬНИК В РУКЕ)
+     ========================================================================== */
+  var ambientLight = new THREE.AmbientLight(0x281b10, 0.75);
+  scene.add(ambientLight);
+
+  var moonLightL = new THREE.DirectionalLight(0x55769c, 0.25);
+  moonLightL.position.set(-4.5, 2.4, 0);
+  scene.add(moonLightL);
+
+  var deskLanternLight = new THREE.PointLight(0xff9c3b, 1.55, 5.8, 1.7);
+  deskLanternLight.position.set(-1.54, DESK_Y + 0.22, -0.62);
+  deskLanternLight.castShadow = true;
+  deskLanternLight.shadow.mapSize.width = 1024;
+  deskLanternLight.shadow.mapSize.height = 1024;
+  deskLanternLight.shadow.bias = -0.0005;
+  scene.add(deskLanternLight);
+
+  // Второй тёплый источник над правой половиной стола, чтобы все ступени рангов отлично читались
+  var rightFillLight = new THREE.PointLight(0xffa448, 0.95, 5.2, 1.8);
+  rightFillLight.position.set(1.05, DESK_Y + 0.85, 0.0);
+  scene.add(rightFillLight);
+
+  // Динамическая лампа игрока, подсвечивающая тот лист, на который смотришь
+  var handLamp = new THREE.PointLight(0xffb862, 1.35, 3.8, 1.75);
+  handLamp.position.set(0, DESK_Y + 0.58, 0.2);
+  handLamp.castShadow = true;
+  handLamp.shadow.mapSize.width = 1024;
+  handLamp.shadow.mapSize.height = 1024;
+  handLamp.shadow.bias = -0.0005;
+  scene.add(handLamp);
+
+  /* ==========================================================================
+     11. СОЗДАНИЕ 3D-БУМАЖЕК НА СТОЛЕ С РЕЛЬЕФОМ, БУЛАВКАМИ И КАМНЯМИ
+     ========================================================================== */
+  var sheetMeshes = [];
+  var sheetMapById = {};
+
+  var stoneMat = new THREE.MeshStandardMaterial({
+    color: 0x262523,
+    bumpMap: paperBumpTex,
+    bumpScale: 0.002,
+    roughness: 0.32,
+    metalness: 0.12
+  });
+
+  function createPinMesh() {
+    var g = new THREE.Group();
+    // Стальная игла
+    var needle = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.001, 0.024, 10), ironMat);
+    needle.position.y = 0.012;
+    g.add(needle);
+    // Багровый шёлковый узелок нити вокруг булавки
+    var silkKnot = new THREE.Mesh(new THREE.TorusGeometry(0.0068, 0.0028, 8, 14), sageoMat);
+    silkKnot.rotation.x = Math.PI / 2;
+    silkKnot.position.y = 0.011;
+    g.add(silkKnot);
+    // Фигурная латунная шляпка булавки
+    var head = new THREE.Mesh(new THREE.SphereGeometry(0.009, 14, 12), brassMat);
+    head.position.y = 0.025;
+    head.castShadow = true;
+    g.add(head);
+    return g;
+  }
+
+  // Создаём живую помятую 3D-геометрию листа бумаги с приподнятыми уголками
+  function createCrumpledPaperGeometry(w, h, seed) {
+    var geo = new THREE.PlaneGeometry(w, h, 18, 18);
+    geo.rotateX(-Math.PI / 2);
+    var pos = geo.attributes.position;
+    var r = rng(seed * 31 + 11);
+    var c1 = (r() - 0.3) * 0.006;
+    var c2 = (r() - 0.3) * 0.006;
+    for (var i = 0; i < pos.count; i++) {
+      var vx = pos.getX(i);
+      var vz = pos.getZ(i);
+      var nx = vx / (w * 0.5);
+      var nz = vz / (h * 0.5);
+      // Плавный изгиб середины и приподнятые углы старой бумаги
+      var arch = Math.cos(nx * Math.PI * 0.5) * Math.cos(nz * Math.PI * 0.5) * 0.0025;
+      var cornerLift = Math.pow(Math.max(0, (Math.abs(nx) + Math.abs(nz)) - 1.15), 2) * (nx > 0 ? c1 : c2);
+      var wave = Math.sin(vx * 18 + seed) * Math.cos(vz * 18 - seed) * 0.0012;
+      pos.setY(i, arch + cornerLift + wave);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  SHEETS_DATA.forEach(function (item, idx) {
+    var group = new THREE.Group();
+    var yOffset = DESK_Y + 0.0025 + idx * 0.0007;
+    group.position.set(item.x, yOffset, item.z);
+    group.rotation.y = item.rot;
+
+    var cv = renderSheetCanvas(item);
+    var tex = new THREE.CanvasTexture(cv);
+    tex.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+
+    var geo = createCrumpledPaperGeometry(item.w, item.h, item.seed);
+    var mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      bumpMap: paperBumpTex,
+      bumpScale: 0.0025,
+      transparent: true,
+      alphaTest: 0.08,
+      roughness: 0.82,
+      metalness: 0.02
+    });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData = { sheetGroup: group, item: item, baseY: yOffset, tex: tex };
+    group.add(mesh);
+
+    // 3D камень-грузик (бунчин) на углу некоторых листов
+    if (item.stone) {
+      var stGeo = new THREE.SphereGeometry(item.stone.r, 20, 16);
+      stGeo.scale(1.18, 0.46, 0.94);
+      var stMesh = new THREE.Mesh(stGeo, stoneMat);
+      stMesh.position.set(item.stone.ox, item.stone.r * 0.42, item.stone.oz);
+      stMesh.rotation.y = idx * 0.8;
+      stMesh.castShadow = true;
+      group.add(stMesh);
+    }
+
+    // 3D латунная булавка с шёлковым узелком на ВСЕХ листах лора и рангов
+    if (item.pin) {
+      var pinMesh = createPinMesh();
+      pinMesh.position.set(0, 0, -item.h * 0.42);
+      group.add(pinMesh);
+    }
+
+    deskGroup.add(group);
+    sheetMeshes.push(mesh);
+    sheetMapById[item.id] = { group: group, mesh: mesh, item: item };
+  });
+
+  function refreshSheetTexture(item) {
+    var entry = sheetMapById[item.id];
+    if (!entry) return;
+    var newCv = renderSheetCanvas(item);
+    entry.mesh.material.map.image = newCv;
+    entry.mesh.material.map.needsUpdate = true;
+  }
+
+  /* ==========================================================================
+     12. 3D ШЁЛКОВЫЕ НИТИ ОТ БУЛАВКИ К БУЛАВКЕ (ЛОР СЛЕВА И ПОВЫШЕНИЕ СПРАВА)
+     ========================================================================== */
+  var threadsGroup = new THREE.Group();
+  deskGroup.add(threadsGroup);
+
+  var loreSequence = ['title', 's1', 's2', 's3', 's4', 's5', 's6'];
+  var rankSequence = ['rank-cd', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9'];
+
+  var loreThreadMat = new THREE.MeshStandardMaterial({ color: 0x9c281c, roughness: 0.55 });
+  var rankThreadMat = new THREE.MeshStandardMaterial({ color: 0xa82418, roughness: 0.5 });
+  var activeGoalThreadMat = new THREE.MeshStandardMaterial({
+    color: 0xff4824,
+    emissive: new THREE.Color(0xb8220c),
+    emissiveIntensity: 0.55,
+    roughness: 0.35
+  });
+
+  function getPinPosition(id) {
+    var e = sheetMapById[id];
+    if (!e) return null;
+    // Локальная координата булавки (0, 0.011, -h * 0.42) с учётом поворота листа
+    var localZ = -e.item.h * 0.42;
+    var sinR = Math.sin(e.group.rotation.y);
+    var cosR = Math.cos(e.group.rotation.y);
+    return new THREE.Vector3(
+      e.group.position.x + localZ * sinR,
+      DESK_Y + 0.013,
+      e.group.position.z + localZ * cosR
+    );
+  }
+
+  function rebuild3DThreads() {
+    while (threadsGroup.children.length > 0) {
+      var ch = threadsGroup.children[0];
+      if (ch.geometry) ch.geometry.dispose();
+      threadsGroup.remove(ch);
+    }
+
+    // 1) Последовательная нить чтения Лора (от булавки к булавке: Титул -> I -> II -> III -> IV -> V -> VI)
+    for (var l = 0; l < loreSequence.length - 1; l++) {
+      var la = getPinPosition(loreSequence[l]);
+      var lb = getPinPosition(loreSequence[l + 1]);
+      if (!la || !lb) continue;
+      var lMid = new THREE.Vector3((la.x + lb.x) * 0.5, DESK_Y + 0.0055, (la.z + lb.z) * 0.5 + 0.035);
+      var lCurve = new THREE.CatmullRomCurve3([la, lMid, lb]);
+      var lGeo = new THREE.TubeGeometry(lCurve, 18, 0.0024, 6, false);
+      var lMesh = new THREE.Mesh(lGeo, loreThreadMat);
+      lMesh.castShadow = true;
+      threadsGroup.add(lMesh);
+    }
+
+    // 2) Последовательная нить Системы Повышения (от булавки к булавке)
+    var goalIdx = -1;
+    if (goalKey) {
+      for (var g = 0; g < rankSequence.length; g++) {
+        var ge = sheetMapById[rankSequence[g]];
+        if (ge && ge.item.num === goalKey) { goalIdx = g; break; }
+      }
+    }
+
+    for (var i = 0; i < rankSequence.length - 1; i++) {
+      var p1 = getPinPosition(rankSequence[i]);
+      var p2 = getPinPosition(rankSequence[i + 1]);
+      if (!p1 || !p2) continue;
+      var mid = new THREE.Vector3((p1.x + p2.x) * 0.5, DESK_Y + 0.0055, (p1.z + p2.z) * 0.5 + 0.035);
+      var curve = new THREE.CatmullRomCurve3([p1, mid, p2]);
+      var isGoalPath = goalIdx > i;
+      var tGeo = new THREE.TubeGeometry(curve, 18, isGoalPath ? 0.0032 : 0.0024, 6, false);
+      var tMesh = new THREE.Mesh(tGeo, isGoalPath ? activeGoalThreadMat : rankThreadMat);
+      tMesh.castShadow = true;
+      threadsGroup.add(tMesh);
+    }
+  }
+  rebuild3DThreads();
+
+  /* ==========================================================================
+     13. МЯГКИЕ КРУГЛЫЕ ЧАСТИЦЫ ПЫЛИНОК И ТЁПЛЫХ УГОЛЬКОВ В ВОЗДУХЕ
+     ========================================================================== */
+  var PARTICLE_COUNT = 95;
+  var pGeo = new THREE.BufferGeometry();
+  var pPositions = new Float32Array(PARTICLE_COUNT * 3);
+  var pVel = [];
+
+  for (var pi = 0; pi < PARTICLE_COUNT; pi++) {
+    pPositions[pi * 3] = (Math.random() - 0.5) * 4.4;
+    pPositions[pi * 3 + 1] = DESK_Y + Math.random() * 1.65;
+    pPositions[pi * 3 + 2] = (Math.random() - 0.5) * 2.6;
+    pVel.push({
+      vx: (Math.random() - 0.5) * 0.05,
+      vy: 0.025 + Math.random() * 0.055,
+      vz: (Math.random() - 0.5) * 0.05,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+
+  var glowTex = createParticleGlowTexture();
+  var pMat = new THREE.PointsMaterial({
+    map: glowTex,
+    color: 0xffc878,
+    size: 0.048,
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  var particlesMesh = new THREE.Points(pGeo, pMat);
+  scene.add(particlesMesh);
+
+  /* ==========================================================================
+     14. КАМЕРА И УПРАВЛЕНИЕ: СРАЗУ ОТ ПЕРВОГО ЛИЦА БЕЗ ЗАСТАВОК + РЕЖИМ КУРСОРА (TAB)
+     ========================================================================== */
+  var mode = 'fps'; // 'fps' или 'desk'
+  var isPointerLocked = false;
+  var crosshair = document.getElementById('crosshair');
+  var hoverLabel = document.getElementById('hoverLabel');
+  var readerEl = document.getElementById('reader');
+
+  // Игрок сразу стоит перед столом и смотрит на разложенные листы
+  var fpsPos = new THREE.Vector3(-0.12, 1.54, 1.08);
+  var fpsYaw = 0;
+  var fpsPitch = -0.58;
+  var isCrouching = false;
+  var walkBobTimer = 0;
+  var lastStepSound = 0;
+  var keys = { w: false, a: false, s: false, d: false };
+
+  // Параметры для режима свободного курсора (Tab)
+  var orbitTarget = new THREE.Vector3(0.0, DESK_Y, 0.04);
+  var orbitSphere = { radius: 2.15, theta: 0.0, phi: 0.55 };
+
+  function syncCameraImmediately() {
+    camera.position.copy(fpsPos);
+    var euler = new THREE.Euler(fpsPitch, fpsYaw, 0, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+  }
+  syncCameraImmediately();
+
+  function toggleMode() {
+    if (mode === 'fps') {
+      mode = 'desk';
+      if (document.pointerLockElement) document.exitPointerLock();
+      crosshair.classList.add('hidden');
+      orbitTarget.set(clamp(fpsPos.x, -1.0, 1.0), DESK_Y, 0.04);
+    } else {
+      mode = 'fps';
+      crosshair.classList.remove('hidden');
+      if (!readerEl.classList.contains('open')) {
+        try { renderer.domElement.requestPointerLock(); } catch (e) {}
+      }
+    }
+  }
+
+  document.addEventListener('pointerlockchange', function () {
+    isPointerLocked = (document.pointerLockElement === renderer.domElement);
+    if (isPointerLocked) {
+      mode = 'fps';
+      crosshair.classList.remove('hidden');
+    }
+  });
+
+  /* ==========================================================================
+     15. RAYCASTER, ОТКРЫТИЕ ЛИСТОВ (ЛКМ) И ПЕРЕТАСКИВАНИЕ ПО СТОЛУ (ПКМ)
+     ========================================================================== */
+  var raycaster = new THREE.Raycaster();
+  var pointerNDC = new THREE.Vector2(0, 0);
+  var deskPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -DESK_Y);
+  var planeIntersect = new THREE.Vector3();
+
+  var hoveredSheetMesh = null;
+  var draggedSheet = null;
+  var isOrbitDragging = false;
+  var isLookDragging = false;
+  var pointerDownPos = { x: 0, y: 0 };
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function updateRaycaster() {
+    if (readerEl.classList.contains('open')) return;
+    if (mode === 'fps' && isPointerLocked) {
+      pointerNDC.set(0, 0);
+    }
+    raycaster.setFromCamera(pointerNDC, camera);
+
+    // Светильник игрока плавно следует за точкой взгляда на столе
+    if (raycaster.ray.intersectPlane(deskPlane, planeIntersect)) {
+      var tx = clamp(planeIntersect.x, -DESK_W * 0.52, DESK_W * 0.52);
+      var tz = clamp(planeIntersect.z, -DESK_D * 0.52, DESK_D * 0.52);
+      handLamp.position.x += (tx - handLamp.position.x) * 0.16;
+      handLamp.position.z += (tz + 0.10 - handLamp.position.z) * 0.16;
+    }
+
+    if (draggedSheet) {
+      if (raycaster.ray.intersectPlane(deskPlane, planeIntersect)) {
+        var nx = clamp(planeIntersect.x - draggedSheet.offsetX, -DESK_W * 0.45, DESK_W * 0.45);
+        var nz = clamp(planeIntersect.z - draggedSheet.offsetZ, -DESK_D * 0.43, DESK_D * 0.43);
+        var dx = nx - draggedSheet.group.position.x;
+        var dz = nz - draggedSheet.group.position.z;
+        if (Math.hypot(dx, dz) > 0.002) {
+          draggedSheet.group.position.x = nx;
+          draggedSheet.group.position.z = nz;
+          draggedSheet.moved = true;
+          Snd.drag(Math.hypot(dx, dz) * 32);
+          rebuild3DThreads();
+        }
+      }
+      return;
+    }
+
+    var hits = raycaster.intersectObjects(sheetMeshes, false);
+    if (hits.length > 0) {
+      var hitMesh = hits[0].object;
+      if (hoveredSheetMesh !== hitMesh) {
+        hoveredSheetMesh = hitMesh;
+        Snd.pick();
+      }
+      var it = hitMesh.userData.item;
+      var titleText = it.num ? (it.num + (it.tag ? ' · ' + it.tag : '')) : 'Зарисовка восхождения';
+      hoverLabel.textContent = titleText + (it.openable ? ' [ЛКМ — читать · ПКМ — двигать]' : ' [ПКМ — двигать]');
+      hoverLabel.classList.add('show');
+      crosshair.classList.add('active');
+    } else {
+      hoveredSheetMesh = null;
+      hoverLabel.classList.remove('show');
+      crosshair.classList.remove('active');
+    }
+  }
+
+  renderer.domElement.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  renderer.domElement.addEventListener('pointermove', function (e) {
+    if (readerEl.classList.contains('open')) return;
+
+    if (mode === 'fps' && isPointerLocked) {
+      fpsYaw -= e.movementX * 0.0021;
+      fpsPitch = clamp(fpsPitch - e.movementY * 0.0021, -1.42, 0.85);
+      pointerNDC.set(0, 0);
+      return;
+    }
+
+    pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+    pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    if (mode === 'fps' && isLookDragging && !draggedSheet) {
+      fpsYaw -= e.movementX * 0.003;
+      fpsPitch = clamp(fpsPitch - e.movementY * 0.003, -1.42, 0.85);
+      return;
+    }
+
+    if (mode === 'desk' && isOrbitDragging) {
+      if (e.buttons === 2 || e.shiftKey) {
+        var panSpeed = 0.0022 * orbitSphere.radius;
+        orbitTarget.x = clamp(orbitTarget.x - e.movementX * panSpeed, -1.45, 1.45);
+        orbitTarget.z = clamp(orbitTarget.z - e.movementY * panSpeed, -0.65, 0.65);
+      } else {
+        orbitSphere.theta = clamp(orbitSphere.theta - e.movementX * 0.0045, -1.1, 1.1);
+        orbitSphere.phi = clamp(orbitSphere.phi - e.movementY * 0.0045, 0.22, 1.28);
+      }
+    }
+  });
+
+  var topDragOrder = 30;
+  renderer.domElement.addEventListener('pointerdown', function (e) {
+    if (readerEl.classList.contains('open')) return;
+    pointerDownPos.x = e.clientX;
+    pointerDownPos.y = e.clientY;
+
+    if (mode === 'fps' && !isPointerLocked) {
+      pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    } else if (mode === 'fps' && isPointerLocked) {
+      pointerNDC.set(0, 0);
+    }
+
+    raycaster.setFromCamera(pointerNDC, camera);
+    var hits = raycaster.intersectObjects(sheetMeshes, false);
+
+    // ПКМ на листе (в любом режиме) или ЛКМ в режиме курсора начинает перетаскивание бумажки
+    if (hits.length > 0 && (e.button === 2 || (mode === 'desk' && e.button === 0))) {
+      var hitMesh = hits[0].object;
+      if (raycaster.ray.intersectPlane(deskPlane, planeIntersect)) {
+        var grp = hitMesh.userData.sheetGroup;
+        topDragOrder++;
+        hitMesh.userData.baseY = DESK_Y + 0.0025 + topDragOrder * 0.0006;
+        draggedSheet = {
+          mesh: hitMesh,
+          group: grp,
+          item: hitMesh.userData.item,
+          offsetX: planeIntersect.x - grp.position.x,
+          offsetZ: planeIntersect.z - grp.position.z,
+          moved: false,
+          button: e.button
+        };
+        Snd.pick();
+        return;
+      }
+    }
+
+    if (mode === 'fps') {
+      if (!isPointerLocked && e.button === 0) {
+        try { renderer.domElement.requestPointerLock(); } catch (err) {}
+      }
+      if (e.button === 0 && isPointerLocked && hits.length > 0) {
+        var itemFps = hits[0].object.userData.item;
+        if (itemFps && itemFps.openable) openReaderByItem(itemFps);
+      } else {
+        isLookDragging = true;
+      }
+    } else {
+      isOrbitDragging = true;
+    }
+  });
+
+  window.addEventListener('pointerup', function (e) {
+    isLookDragging = false;
+    if (draggedSheet) {
+      var ds = draggedSheet;
+      draggedSheet = null;
+      Snd.dragEnd();
+      if (ds.moved) {
+        Snd.drop();
+      } else if (ds.button === 0 && ds.item.openable && Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) < 6) {
+        openReaderByItem(ds.item);
+      }
+    }
+    isOrbitDragging = false;
+  });
+
+  renderer.domElement.addEventListener('wheel', function (e) {
+    if (readerEl.classList.contains('open')) return;
+    if (mode === 'desk') {
+      orbitSphere.radius = clamp(orbitSphere.radius + e.deltaY * 0.0014, 0.72, 3.2);
+    } else {
+      camera.fov = clamp(camera.fov + e.deltaY * 0.02, 26, 62);
+      camera.updateProjectionMatrix();
+    }
+  }, { passive: true });
+
+  /* ==========================================================================
+     16. КЛАВИАТУРА (WASD — ШАГ, SPACE/C — НАКЛОНИТЬСЯ, TAB — РЕЖИМ КУРСОРА)
+     ========================================================================== */
+  window.addEventListener('keydown', function (e) {
+    var code = e.code;
+    if (code === 'Tab') {
+      e.preventDefault();
+      if (!readerEl.classList.contains('open')) toggleMode();
+      return;
+    }
+    if (readerEl.classList.contains('open')) {
+      if (code === 'Escape') closeReader();
+      else if (code === 'ArrowLeft') openAt(curReaderIdx - 1);
+      else if (code === 'ArrowRight') openAt(curReaderIdx + 1);
+      return;
+    }
+
+    if (code === 'KeyW' || code === 'ArrowUp') keys.w = true;
+    if (code === 'KeyS' || code === 'ArrowDown') keys.s = true;
+    if (code === 'KeyA' || code === 'ArrowLeft') keys.a = true;
+    if (code === 'KeyD' || code === 'ArrowRight') keys.d = true;
+    if (code === 'Space' || code === 'KeyC') {
+      e.preventDefault();
+      isCrouching = !isCrouching;
+      Snd.pick();
+    }
+    if (code === 'KeyE' && hoveredSheetMesh && hoveredSheetMesh.userData.item.openable) {
+      openReaderByItem(hoveredSheetMesh.userData.item);
+    }
+  });
+
+  window.addEventListener('keyup', function (e) {
+    var code = e.code;
+    if (code === 'KeyW' || code === 'ArrowUp') keys.w = false;
+    if (code === 'KeyS' || code === 'ArrowDown') keys.s = false;
+    if (code === 'KeyA' || code === 'ArrowLeft') keys.a = false;
+    if (code === 'KeyD' || code === 'ArrowRight') keys.d = false;
+  });
+
+  /* ==========================================================================
+     17. МОДАЛЬНОЕ ОКНО ЧТЕНИЯ ЛИСТА И ОТМЕТКИ ЗАДАНИЙ / ПЕЧАТИ «ЦЕЛЬ»
+     ========================================================================== */
+  var openableItems = SHEETS_DATA.filter(function (it) { return it.openable; }).sort(function (a, b) { return a.order - b.order; });
+  var rpaper = document.getElementById('rpaper');
+  var rscroll = document.getElementById('rscroll');
+  var rnum = document.getElementById('rnum');
+  var rtag = document.getElementById('rtag');
+  var rbody = document.getElementById('rbody');
+  var rprev = document.getElementById('rprev');
+  var rnext = document.getElementById('rnext');
+  var rclose = document.getElementById('rclose');
+  var rmark = document.getElementById('rmark');
+  var curReaderIdx = -1;
+  var wasPointerLockedBeforeRead = false;
+
+  function renderReaderDOM(item, idx) {
+    curReaderIdx = idx;
+    rnum.textContent = item.num;
+    rtag.textContent = item.tag || '';
+
+    var html = '';
+    if (item.paragraphs) {
+      item.paragraphs.forEach(function (p) { html += '<p>' + p + '</p>'; });
+    } else if (item.cdList) {
+      html += '<ul class="cd-list">';
+      item.cdList.forEach(function (row) {
+        var curCls = goalKey === row[0] ? ' class="cur"' : '';
+        html += '<li' + curCls + '><span>' + row[0] + '</span><span>' + row[1] + '</span></li>';
+      });
+      html += '</ul>';
+    } else if (item.tasks) {
+      html += '<ul class="rank-list">';
+      item.tasks.forEach(function (t, tIdx) {
+        var tKey = item.num + '::' + tIdx;
+        var dCls = doneTasks[tKey] ? ' class="done"' : '';
+        html += '<li' + dCls + ' data-task-key="' + tKey + '">' + t + '</li>';
+      });
+      html += '</ul>';
+    }
+    rbody.innerHTML = html;
+
+    var oldStamp = rpaper.querySelector('.rank-stamp-dom');
+    if (oldStamp) oldStamp.remove();
+    if (item.type === 'rank' && goalKey === item.num) {
+      var st = document.createElement('i');
+      st.className = 'rank-stamp-dom';
+      st.textContent = 'цель';
+      rpaper.appendChild(st);
+    }
+
+    rpaper.className = 'rpaper ' + item.pal + ' ' + item.hand + (item.fold ? ' fold' : '');
+    rpaper.style.setProperty('--clip', roughClipCSS(item.seed, 0.7, item.corner));
+    rscroll.scrollTop = 0;
+
+    rprev.hidden = (idx === 0);
+    rnext.hidden = (idx === openableItems.length - 1);
+
+    if (item.type === 'rank') {
+      rmark.hidden = false;
+      rmark.textContent = (goalKey === item.num) ? 'снять печать «цель»' : 'поставить печать «цель»';
+    } else {
+      rmark.hidden = true;
+    }
+  }
+
+  rbody.addEventListener('click', function (e) {
+    var li = e.target.closest('.rank-list li');
+    if (!li || !li.dataset.taskKey) return;
+    var key = li.dataset.taskKey;
+    if (doneTasks[key]) delete doneTasks[key];
+    else doneTasks[key] = true;
+    saveTasks();
+    li.classList.toggle('done', !!doneTasks[key]);
+    Snd.pick();
+    var curItem = openableItems[curReaderIdx];
+    if (curItem) refreshSheetTexture(curItem);
+  });
+
+  rmark.addEventListener('click', function () {
+    var item = openableItems[curReaderIdx];
+    if (!item || item.type !== 'rank') return;
+    var prevGoal = goalKey;
+    goalKey = (goalKey === item.num) ? null : item.num;
+    try {
+      if (goalKey) localStorage.setItem(GKEY, goalKey);
+      else localStorage.removeItem(GKEY);
+    } catch (e) {}
+
+    if (goalKey) Snd.stamp(); else Snd.drop();
+
+    renderReaderDOM(item, curReaderIdx);
+    refreshSheetTexture(item);
+    if (prevGoal) {
+      var prevIt = SHEETS_DATA.find(function (s) { return s.num === prevGoal; });
+      if (prevIt) refreshSheetTexture(prevIt);
+    }
+    refreshSheetTexture(SHEETS_DATA[9]);
+    rebuild3DThreads();
+  });
+
+  function openAt(idx) {
+    if (idx < 0 || idx >= openableItems.length) return;
+    var wasOpen = readerEl.classList.contains('open');
+    if (!wasOpen) {
+      wasPointerLockedBeforeRead = isPointerLocked;
+      if (document.pointerLockElement) document.exitPointerLock();
+      Snd.open();
+    } else {
+      Snd.turn();
+    }
+    renderReaderDOM(openableItems[idx], idx);
+    readerEl.classList.add('open');
+    readerEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function openReaderByItem(item) {
+    var idx = openableItems.indexOf(item);
+    if (idx !== -1) openAt(idx);
+  }
+
+  function closeReader() {
+    Snd.close();
+    readerEl.classList.remove('open');
+    readerEl.setAttribute('aria-hidden', 'true');
+    if (wasPointerLockedBeforeRead && mode === 'fps') {
+      try { renderer.domElement.requestPointerLock(); } catch (e) {}
+    }
+  }
+
+  rclose.addEventListener('click', closeReader);
+  rprev.addEventListener('click', function () { openAt(curReaderIdx - 1); });
+  rnext.addEventListener('click', function () { openAt(curReaderIdx + 1); });
+  readerEl.addEventListener('pointerdown', function (e) { if (e.target === readerEl) closeReader(); });
+
+  /* ==========================================================================
+     18. ГЛАВНЫЙ ЦИКЛ 3D-РЕНДЕРА И ФИЗИКИ ПЕРЕМЕЩЕНИЯ
+     ========================================================================== */
+  var clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    var dt = Math.min(0.05, clock.getDelta());
+    var elapsed = clock.getElapsedTime();
+
+    // Мерцание огня в настольном фонаре Андон и жаровне Хибати
+    var flicker = Math.sin(elapsed * 8.2) * 0.08 + Math.sin(elapsed * 15.1 + 1.4) * 0.05 + Math.cos(elapsed * 23.7) * 0.03;
+    deskLanternLight.intensity = 1.52 + flicker;
+    hibachiLight.intensity = 0.85 + flicker * 0.8;
+    handLamp.intensity = 1.32 + flicker * 0.45;
+    flameMesh.scale.set(1 + flicker * 0.4, 1 + flicker * 0.9, 1 + flicker * 0.4);
+    flameHalo.scale.set(1 + flicker * 0.6, 1 + flicker * 1.1, 1 + flicker * 0.6);
+
+    // Плавное парение пылинок и тёплых угольков в воздухе
+    var posAttr = pGeo.attributes.position;
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      var v = pVel[i];
+      var px = posAttr.getX(i) + (v.vx + Math.sin(elapsed * 1.4 + v.phase) * 0.018) * dt;
+      var py = posAttr.getY(i) + v.vy * dt;
+      var pz = posAttr.getZ(i) + (v.vz + Math.cos(elapsed * 1.2 + v.phase) * 0.018) * dt;
+      if (py > DESK_Y + 1.8) {
+        py = DESK_Y + 0.04;
+        px = (Math.random() - 0.5) * 3.8;
+        pz = (Math.random() - 0.5) * 2.0;
+      }
+      posAttr.setXYZ(i, px, py, pz);
+    }
+    posAttr.needsUpdate = true;
+
+    // Движение камеры в режиме от первого лица или свободного курсора
+    if (mode === 'fps') {
+      var forward = new THREE.Vector3(-Math.sin(fpsYaw), 0, -Math.cos(fpsYaw)).normalize();
+      var right = new THREE.Vector3(Math.cos(fpsYaw), 0, -Math.sin(fpsYaw)).normalize();
+      var moveVec = new THREE.Vector3();
+
+      if (keys.w) moveVec.add(forward);
+      if (keys.s) moveVec.sub(forward);
+      if (keys.d) moveVec.add(right);
+      if (keys.a) moveVec.sub(right);
+
+      if (moveVec.lengthSq() > 0.001) {
+        moveVec.normalize().multiplyScalar((isCrouching ? 1.35 : 2.15) * dt);
+        var nextX = clamp(fpsPos.x + moveVec.x, -4.1, 4.1);
+        var nextZ = clamp(fpsPos.z + moveVec.z, -2.75, 2.95);
+
+        // Коллизия со столом в центре комнаты
+        var halfW = DESK_W * 0.5 + 0.24;
+        var halfD = DESK_D * 0.5 + 0.24;
+        if (Math.abs(nextX) < halfW && Math.abs(nextZ) < halfD) {
+          if (Math.abs(fpsPos.x) >= halfW) nextX = fpsPos.x;
+          if (Math.abs(fpsPos.z) >= halfD) nextZ = fpsPos.z;
+        }
+        fpsPos.x = nextX;
+        fpsPos.z = nextZ;
+
+        walkBobTimer += dt * 9.5;
+        if (elapsed - lastStepSound > 0.44) {
+          lastStepSound = elapsed;
+          Snd.step();
+        }
+      }
+
+      var targetEyeY = (isCrouching ? 1.18 : 1.56) + Math.sin(walkBobTimer) * 0.015;
+      fpsPos.y += (targetEyeY - fpsPos.y) * Math.min(1, dt * 10);
+
+      camera.position.copy(fpsPos);
+      var euler = new THREE.Euler(fpsPitch, fpsYaw, 0, 'YXZ');
+      camera.quaternion.setFromEuler(euler);
+    } else {
+      var targetCamPos = new THREE.Vector3(
+        orbitTarget.x + orbitSphere.radius * Math.sin(orbitSphere.phi) * Math.sin(orbitSphere.theta),
+        orbitTarget.y + orbitSphere.radius * Math.cos(orbitSphere.phi),
+        orbitTarget.z + orbitSphere.radius * Math.sin(orbitSphere.phi) * Math.cos(orbitSphere.theta)
+      );
+      camera.position.lerp(targetCamPos, Math.min(1, dt * 8));
+      camera.lookAt(orbitTarget);
+    }
+
+    updateRaycaster();
+
+    // Плавный подъём бумажки над столом при наведении или перетаскивании
+    for (var s = 0; s < sheetMeshes.length; s++) {
+      var sm = sheetMeshes[s];
+      var grp = sm.userData.sheetGroup;
+      var isHover = (hoveredSheetMesh === sm);
+      var isDrag = (draggedSheet && draggedSheet.mesh === sm);
+      var targetY = sm.userData.baseY + (isDrag ? 0.028 : (isHover ? 0.011 : 0));
+      grp.position.y += (targetY - grp.position.y) * Math.min(1, dt * 14);
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  window.addEventListener('resize', function () {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () {
+      SHEETS_DATA.forEach(function (it) { refreshSheetTexture(it); });
+    });
+  }
+
+  window.onload = function () {
+    animate();
+  };
+})();
+</script>
+</body>
+</html>
